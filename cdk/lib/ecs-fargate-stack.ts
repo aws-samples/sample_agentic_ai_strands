@@ -289,10 +289,10 @@ export class EcsFargateStack extends cdk.Stack {
       healthCheck: {
         path: '/chat',
         healthyHttpCodes: '200',
-        interval: cdk.Duration.seconds(30),
+        interval: cdk.Duration.seconds(60),
         timeout: cdk.Duration.seconds(5),
         healthyThresholdCount: 2,
-        unhealthyThresholdCount: 3,
+        unhealthyThresholdCount: 5,
       },
     });
 
@@ -306,10 +306,10 @@ export class EcsFargateStack extends cdk.Stack {
       healthCheck: {
         path: '/api/health',
         healthyHttpCodes: '200',
-        interval: cdk.Duration.seconds(30),
+        interval: cdk.Duration.seconds(60),
         timeout: cdk.Duration.seconds(5),
         healthyThresholdCount: 2,
-        unhealthyThresholdCount: 3,
+        unhealthyThresholdCount: 5,
       },
     });
 

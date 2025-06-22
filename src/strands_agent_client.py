@@ -74,18 +74,6 @@ class StrandsAgentClient(ChatClient):
                     "temperature": temperature,
                 }
             )
-        elif self.model_provider == 'anthropic':
-            from strands.models.anthropic import AnthropicModel
-            return AnthropicModel(
-                client_args={
-                    "api_key": self.api_key
-                },
-                model_id=model_id,
-                params={
-                    "max_tokens": max_tokens,
-                    "temperature": temperature,
-                }
-            )
         elif self.model_provider == 'bedrock':
             # Create a custom boto3 session
             if self.env['AWS_ACCESS_KEY_ID']:

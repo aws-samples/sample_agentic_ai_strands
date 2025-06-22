@@ -9,10 +9,6 @@
 			"model_name": "DeepSeek-V3-free"
 		},
 		{
-			"model_id": "deepseek-ai/DeepSeek-R1/wvvkzheh2i",
-			"model_name": "DeepSeek-R1-0528"
-		},
-		{
 			"model_id": "Pro/deepseek-ai/DeepSeek-R1",
 			"model_name": "DeepSeek-R1-Pro"
 		},
@@ -28,13 +24,17 @@
 			"model_id": "deepseek-chat",
 			"model_name": "DeepSeek-v3-official"
 		},
-				{
+		{
 			"model_id": "Qwen/Qwen3-235B-A22B",
 			"model_name": "Qwen3-235B-A22B"
 		},
 		{
 			"model_id": "Qwen/Qwen3-30B-A3B",
 			"model_name": "Qwen3-30B-A3B"
+		},
+		{
+			"model_id": "deepseek-r1-250528",
+			"model_name": "DeepSeek-R1-volc"
 		}
 	],
 	"mcpServers": {

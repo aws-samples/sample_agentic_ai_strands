@@ -213,13 +213,13 @@ class StrandsAgentClientStream(StrandsAgentClient):
         """Monitor stream status in a separate thread"""
         logger.info(f"Monitor thread started for stream: {stream_id}")
         
+        # Create event loop once for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
         try:
             while not stop_event.is_set():
                 try:
-                    # Create new event loop for this thread
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    
                     # Check if stream still exists in remote DDB
                     stream_exists = loop.run_until_complete(get_stream_id(stream_id=stream_id))
                     
@@ -234,17 +234,16 @@ class StrandsAgentClientStream(StrandsAgentClient):
                         # self.agent = None
                         break
                         
-                    loop.close()
-                    
                 except Exception as e:
                     logger.error(f"Error in monitor thread for stream {stream_id}: {e}")
                 
-                # Wait for 2 seconds before next check, but allow early termination
-                stop_event.wait(timeout=2.0)
+                # Wait for 5 seconds before next check (longer interval to reduce load)
+                stop_event.wait(timeout=5.0)
                 
         except Exception as e:
             logger.error(f"Monitor thread for stream {stream_id} encountered error: {e}")
         finally:
+            loop.close()
             logger.info(f"Monitor thread for stream {stream_id} terminated")
     
     async def _process_stream_response(self, stream_id: Optional[str], response) -> AsyncIterator[Dict]:
@@ -390,8 +389,8 @@ class StrandsAgentClientStream(StrandsAgentClient):
         
         while True:
             try:
-                # Get event from queue with timeout
-                event = stream_queue.get(timeout=1.0)
+                # Use shorter timeout and yield control more frequently
+                event = stream_queue.get(timeout=0.1)
                 
                 # Check if stream should stop
                 if stream_id in self.stop_flags and self.stop_flags[stream_id]:
@@ -412,6 +411,8 @@ class StrandsAgentClientStream(StrandsAgentClient):
                 yield event
                 
             except queue.Empty:
+                # Yield control to event loop more frequently
+                await asyncio.sleep(0.01)
                 # Check if we should continue waiting
                 if stream_id in self.stop_flags and self.stop_flags[stream_id]:
                     logger.info(f"Stream {stream_id} timed out and stop flag is set")

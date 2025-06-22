@@ -648,9 +648,9 @@ async def stream_chat_response(data: ChatCompletionRequest, session: UserSession
         """独立的心跳发送任务"""
         try:
             while not heartbeat_stop_event.is_set():
-                await asyncio.sleep(15)  # 每15秒发送一次心跳
+                await asyncio.sleep(30)  # 每30秒发送一次心跳，减少频率
                 if not heartbeat_stop_event.is_set():
-                    logger.info("sse heartbeat")
+                    logger.debug("sse heartbeat")  # 改为debug级别，减少日志噪音
                     yield ": heartbeat\n\n"
         except asyncio.CancelledError:
             pass
@@ -856,6 +856,8 @@ async def stream_chat_response(data: ChatCompletionRequest, session: UserSession
                     event_data["choices"][0]["delta"] = {
                         "content": f"Error: {response['data']}"
                     }
+                     # 抛出异常
+                    raise Exception(response['data'])
 
                 # 发送事件
                 yield f"data: {json.dumps(event_data)}\n\n"
@@ -1131,7 +1133,10 @@ if __name__ == '__main__':
             "host": args.host,
             "port": args.port,
             "loop": loop,
-            "timeout_keep_alive": 3600  # 设置为1小时或更长
+            "timeout_keep_alive": 3600,  # 设置为1小时或更长
+            "limit_concurrency": 100,  # 限制并发连接数
+            "limit_max_requests": 1000,  # 限制最大请求数
+            "timeout_graceful_shutdown": 30  # 优雅关闭超时
         }
         
         # 如果启用HTTPS且有有效证书，添加SSL配置
