@@ -186,7 +186,7 @@ class Mem0ServiceClient:
         },
     }
     PG_CONFIG_BEDROCK = {
-        "embedder": {"provider": "aws_bedrock", "config": {"model": "amazon.titan-embed-text-v2:0"}},
+        "embedder": {"provider": "aws_bedrock", "config": {"model": os.environ.get("EMBEDDING_MODEL","amazon.titan-embed-text-v2:0")}},
         "llm": {
             "provider": "aws_bedrock",
             "config": {

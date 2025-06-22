@@ -76,15 +76,27 @@ STRANDS_MODEL_PROVIDER=bedrock
 AWS_ACCESS_KEY_ID=your_access_key
 AWS_SECRET_ACCESS_KEY=your_secret_key
 AWS_REGION=us-east-1
-```
+```  
+注意更改mem0所用的llm和embedding模型为bedrock模型   
 
-- 如果使用硅基流动等openai兼容接口模型
+```bash
+LLM_MODEL=us.amazon.nova-pro-v1:0
+EMBEDDING_MODEL=amazon.titan-embed-text-v2:0
+```  
+
+- 如果使用硅基流动等openai兼容接口模型,
 ```bash
 AWS_REGION=cn-north-1
 CLIENT_TYPE=strands
 STRANDS_MODEL_PROVIDER=openai
 OPENAI_API_KEY=your_openai_api_key
-OPENAI_BASE_URL=https://api.siliconflow.cn
+OPENAI_BASE_URL=https://api.siliconflow.cn/v1
+```  
+
+注意更改mem0所用的llm和embedding模型为国内模型  
+```bash
+LLM_MODEL=Qwen/Qwen3-14B
+EMBEDDING_MODEL=Pro/BAAI/bge-m3
 ```
 
 - 默认配置支持`DeepSeek-R1`,`Qwen3`等模型, 如果需要支持其他模型（必须是支持tool use的模型），请自行修改[conf/config.json](conf/config.json)配置加入模型，例如：
