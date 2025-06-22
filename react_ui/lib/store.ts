@@ -126,11 +126,11 @@ Please use the maximum computational power and token limit available in a single
       // Settings
       systemPrompt: 'You are a helpful assistant.',
       setSystemPrompt: (prompt) => set({ systemPrompt: prompt }),
-      maxTokens: 4000,
+      maxTokens: 8192,
       setMaxTokens: (tokens) => set({ maxTokens: tokens }),
       temperature: 0.7,
       setTemperature: (temp) => set({ temperature: temp }),
-      enableThinking: false,
+      enableThinking: true,
       setEnableThinking: (enabled) => set({ enableThinking: enabled }),
       enableStream: true,
       setEnableStream: (enabled) => set({ enableStream: enabled }),
