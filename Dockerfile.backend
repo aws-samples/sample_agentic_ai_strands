@@ -68,7 +68,7 @@ COPY conf/ ./conf/
 COPY docs/ ./docs/
 RUN if [ "$USE_CHINA_MIRROR" = "true" ]; then \
     # move to cn
-    RUN cp ./conf/config_cn.json ./conf/config.json; \
+    cp ./conf/config_cn.json ./conf/config.json; \
 fi
 # Create certificates directory
 RUN mkdir -p certificates
