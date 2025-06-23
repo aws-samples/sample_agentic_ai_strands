@@ -21,8 +21,11 @@ REGION="${AWS_REGION:-cn-northwest-1}"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 PREFIX="strands-mcp-app"
 PLATFORM="linux/arm64"
+# Mem0 配置 - 从环境变量读取，默认启用
+ENABLE_MEM0="${ENABLE_MEM0:-true}"
 export CDK_DEFAULT_REGION=$REGION
 export CDK_DEFAULT_ACCOUNT=$ACCOUNT_ID
+export ENABLE_MEM0=$ENABLE_MEM0
 # 检测是否为中国区域
 if [[ $REGION == cn-* ]]; then
     IS_CHINA_REGION=true
@@ -39,6 +42,7 @@ fi
 echo "使用 AWS 账户: $ACCOUNT_ID"
 echo "使用区域: $REGION"
 echo "ECR 域名: $ECR_DOMAIN"
+echo "Mem0 功能: $ENABLE_MEM0"
 
 # 1. 创建或获取 ECR 仓库
 echo "========================================="
@@ -221,9 +225,11 @@ echo "========================================="
 
 cd cdk
 echo "部署 CDK Stack（镜像已准备就绪）..."
+echo "Mem0 功能设置: $ENABLE_MEM0"
 export AWS_ACCOUNT_ID=$ACCOUNT_ID
 export AWS_REGION=$REGION
-npx cdk deploy --require-approval never --region $REGION
+export ENABLE_MEM0=$ENABLE_MEM0
+npx cdk deploy --require-approval never --region $REGION --context enableMem0=$ENABLE_MEM0
 
 # 获取输出
 STACK_NAME="McpEcsFargateStack"
