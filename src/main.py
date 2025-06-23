@@ -924,7 +924,7 @@ async def stream_chat_response(data: ChatCompletionRequest, session: UserSession
         heartbeat_stop_event.set()
         
         # save history message 
-        await session.chat_client.save_history()
+        # await session.chat_client.save_history()
         # 清除活跃流列表中的请求
         try:
             if stream_id:

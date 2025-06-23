@@ -202,6 +202,8 @@ class StrandsAgentClientStream(StrandsAgentClient):
                 # Put event in queue for main thread to consume
                 stream_queue.put(event)
                 
+            #save history message as stream end
+            await self.save_history()
             # Signal end of stream
             stream_queue.put({"type": "stream_end"})
             
