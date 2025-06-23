@@ -41,14 +41,27 @@ if [ -z "$AWS_ACCESS_KEY_ID" ]; then
     MISSING_VARS+=("AWS_ACCESS_KEY_ID")
 else
     echo "✅ AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
+    # 更新 AWS 凭证
+    echo "更新 AWS 凭证..."
+    aws secretsmanager update-secret \
+        --secret-id "${PREFIX}/aws-credentials" \
+        --secret-string "{\"AccessKeyId\":\"${AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${AWS_SECRET_ACCESS_KEY}\"}" \
+        --region $REGION || {
+    echo "创建 AWS 凭证密钥..."
+        aws secretsmanager create-secret \
+            --name "${PREFIX}/aws-credentials" \
+            --description "AWS Access Credentials" \
+            --secret-string "{\"AccessKeyId\":\"${AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${AWS_SECRET_ACCESS_KEY}\"}" \
+            --region $REGION
+    }
 fi
 
-if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-    echo "❌ AWS_SECRET_ACCESS_KEY 未设置或为空"
-    MISSING_VARS+=("AWS_SECRET_ACCESS_KEY")
-else
-    echo "✅ AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
-fi
+# if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+#     echo "❌ AWS_SECRET_ACCESS_KEY 未设置或为空"
+#     MISSING_VARS+=("AWS_SECRET_ACCESS_KEY")
+# else
+#     echo "✅ AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
+# fi
 
 # if [ -z "$API_KEY" ]; then
 #     echo "❌ API_KEY 未设置或为空"
@@ -59,16 +72,42 @@ fi
 
 if [ -z "$OPENAI_API_KEY" ]; then
     echo "❌ OPENAI_API_KEY 未设置或为空"
-    MISSING_VARS+=("OPENAI_API_KEY")
+    # MISSING_VARS+=("OPENAI_API_KEY")
 else
     echo "✅ OPENAI_API_KEY: ${OPENAI_API_KEY:0:10}..."
+    # 更新 Strands API Key
+    echo "更新 Strands API Key..."
+    aws secretsmanager update-secret \
+        --secret-id "${PREFIX}/strands-api-key" \
+        --secret-string "${OPENAI_API_KEY}" \
+        --region $REGION || {
+        echo "创建 Strands API Key 密钥..."
+        aws secretsmanager create-secret \
+            --name "${PREFIX}/strands-api-key" \
+            --description "Strands API Key" \
+            --secret-string "${OPENAI_API_KEY}" \
+            --region $REGION
+    }
 fi
 
 if [ -z "$OPENAI_BASE_URL" ]; then
     echo "❌ OPENAI_BASE_URL 未设置或为空"
-    MISSING_VARS+=("OPENAI_BASE_URL")
+    # MISSING_VARS+=("OPENAI_BASE_URL")
 else
     echo "✅ OPENAI_BASE_URL: $OPENAI_BASE_URL"
+    # 更新 OPENAI Base URL
+    echo "更新 OPENAI Base URL..."
+    aws secretsmanager update-secret \
+        --secret-id "${PREFIX}/strands-api-base" \
+        --secret-string "${OPENAI_BASE_URL}" \
+        --region $REGION || {
+        echo "创建 OPENAI Base URL 密钥..."
+        aws secretsmanager create-secret \
+            --name "${PREFIX}/strands-api-base" \
+            --description "OPENAI Base URL" \
+            --secret-string "${OPENAI_BASE_URL}" \
+            --region $REGION
+    }
 fi
 
 # if [ -z "$LANGFUSE_HOST" ]; then
@@ -111,19 +150,7 @@ echo "========================================="
 echo "更新 Secrets Manager"
 echo "========================================="
 
-# 更新 AWS 凭证
-echo "更新 AWS 凭证..."
-aws secretsmanager update-secret \
-    --secret-id "${PREFIX}/aws-credentials" \
-    --secret-string "{\"AccessKeyId\":\"${AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${AWS_SECRET_ACCESS_KEY}\"}" \
-    --region $REGION || {
-    echo "创建 AWS 凭证密钥..."
-    aws secretsmanager create-secret \
-        --name "${PREFIX}/aws-credentials" \
-        --description "AWS Access Credentials" \
-        --secret-string "{\"AccessKeyId\":\"${AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${AWS_SECRET_ACCESS_KEY}\"}" \
-        --region $REGION
-}
+
 
 # 更新 API Key
 # echo "更新 API Key..."
@@ -140,33 +167,9 @@ aws secretsmanager update-secret \
 # }
 
 
-# 更新 Strands API Key
-echo "更新 Strands API Key..."
-aws secretsmanager update-secret \
-    --secret-id "${PREFIX}/strands-api-key" \
-    --secret-string "${OPENAI_API_KEY}" \
-    --region $REGION || {
-    echo "创建 Strands API Key 密钥..."
-    aws secretsmanager create-secret \
-        --name "${PREFIX}/strands-api-key" \
-        --description "Strands API Key" \
-        --secret-string "${OPENAI_API_KEY}" \
-        --region $REGION
-}
 
-# 更新 OPENAI Base URL
-echo "更新 OPENAI Base URL..."
-aws secretsmanager update-secret \
-    --secret-id "${PREFIX}/strands-api-base" \
-    --secret-string "${OPENAI_BASE_URL}" \
-    --region $REGION || {
-    echo "创建 OPENAI Base URL 密钥..."
-    aws secretsmanager create-secret \
-        --name "${PREFIX}/strands-api-base" \
-        --description "OPENAI Base URL" \
-        --secret-string "${OPENAI_BASE_URL}" \
-        --region $REGION
-}
+
+
 
 # 更新 Langfuse 配置
 # echo "更新 Langfuse Host..."
