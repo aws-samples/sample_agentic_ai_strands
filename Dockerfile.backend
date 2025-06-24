@@ -2,8 +2,8 @@
 ARG USE_CHINA_MIRROR=false
 ARG PLATFROM=linux/arm64
 # 定义不同的 Python 基础镜像阶段
-FROM --platform=$PLATFROM python:3.12-slim-bookworm AS python-base-false
-FROM --platform=$PLATFROM mirror-docker.bosicloud.com/python:3.12-slim-bookworm AS python-base-true
+FROM --platform=$PLATFROM python:3.12-bookworm AS python-base-false
+FROM --platform=$PLATFROM mirror-docker.bosicloud.com/python:3.12-bookworm AS python-base-true
 # 基于 USE_CHINA_MIRROR 的值选择最终使用的 Python 基础镜像
 FROM python-base-${USE_CHINA_MIRROR} AS final
 # 重新定义 ARG 以便在 FROM 之后使用
@@ -34,7 +34,7 @@ RUN if [ "$USE_CHINA_MIRROR" = "true" ]; then \
         echo "Configuring pip mirrors for China region..."; \
         pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
         pip config set global.extra-index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
-        pip config set global.trusted-host https://pypi.tuna.tsinghua.edu.cn; \
+        pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn; \
     fi
 
 ENV UV_DEFAULT_INDEX=$PIP_INDEX_URL
@@ -44,24 +44,25 @@ COPY pyproject.toml ./
 COPY uv.lock ./
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -e .
-# RUN uv sync 
-# RUN . .venv/bin/activate 
+# RUN pip install --no-cache-dir -e .
+RUN uv sync 
 
 # forkrepo，支持r1 reasoning content
-RUN pip install git+https://github.com/xiehust/sdk-python.git@gcr
+RUN uv pip install git+https://github.com/xiehust/sdk-python.git@gcr
 
 # forkrepo, 修复mem0不支持nova问题
-RUN pip install git+https://github.com/xiehust/mem0.git
+RUN uv pip install git+https://github.com/xiehust/mem0.git
 
 RUN git clone https://github.com/BochaAI/bocha-search-mcp.git
 # RUN pip install git+https://ghproxy.cn/https://github.com/xiehust/sdk-python.git
 # download mcp repo 
 RUN git clone https://github.com/aws-samples/aws-mcp-servers-samples -b main
 
+RUN . .venv/bin/activate 
+
 # 修改默认超时为120s
 RUN \
-export PYTHON_SITEPACKAGES=`python3 -c "import site; print(site.getsitepackages()[0])"`; \
+export PYTHON_SITEPACKAGES=`.venv/bin/python3 -c "import site; print(site.getsitepackages()[0])"`; \
 sed -i 's/\(self\._init_future\.result(timeout=\)30/\1120/g' ${PYTHON_SITEPACKAGES}/strands/tools/mcp/mcp_client.py
 
 # Copy source code
@@ -76,8 +77,8 @@ fi
 RUN mkdir -p certificates
 
 # Set environment variables
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
+# ENV PYTHONPATH=/app
+# ENV PYTHONUNBUFFERED=1
 
 # Expose port
 EXPOSE 7002
@@ -88,4 +89,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 
 # Run the application
 # CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "7002"]
-CMD ["python", "src/main.py", "--mcp-conf","conf/config.json", "--user-conf","conf/user_mcp_config.json","--host", "0.0.0.0", "--port", "7002"]
+CMD [".venv/bin/python3", "src/main.py", "--mcp-conf","conf/config.json", "--user-conf","conf/user_mcp_config.json","--host", "0.0.0.0", "--port", "7002"]
