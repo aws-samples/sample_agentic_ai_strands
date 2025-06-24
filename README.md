@@ -79,9 +79,11 @@ AWS_ACCESS_KEY_ID=your_access_key
 AWS_SECRET_ACCESS_KEY=your_secret_key
 AWS_REGION=us-east-1
 ```  
-注意更改mem0所用的llm和embedding模型为bedrock模型   
 
+注意更改mem0所用的llm和embedding模型为bedrock模型   
+如果需要禁用mem0，可以更改`ENABLE_MEM0=false`  
 ```bash
+ENABLE_MEM0=true
 LLM_MODEL=us.amazon.nova-pro-v1:0
 EMBEDDING_MODEL=amazon.titan-embed-text-v2:0
 ```  
@@ -96,6 +98,7 @@ OPENAI_BASE_URL=https://api.siliconflow.cn/v1
 ```  
 
 注意更改mem0所用的llm和embedding模型为国内模型  
+如果需要禁用mem0，可以更改`ENABLE_MEM0=false`  
 ```bash
 LLM_MODEL=Qwen/Qwen3-14B
 EMBEDDING_MODEL=Pro/BAAI/bge-m3
