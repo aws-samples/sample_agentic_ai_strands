@@ -34,11 +34,17 @@ RUN npm install
 COPY . .
 RUN rm .env.local
 
-# Set environment variables
+# Set environment variables for optimized build
 ENV NODE_ENV=production
-ENV NODE_OPTIONS="--http-parser=legacy --max-http-header-size=16384"
+ENV NODE_OPTIONS="--http-parser=legacy --max-http-header-size=16384 --max-old-space-size=4096"
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV CI=true
 
-# Build the Next.js application
+# Enable Next.js optimizations
+ENV NEXT_BUILD_WORKERS=4
+ENV UV_THREADPOOL_SIZE=16
+
+# Build the Next.js application with parallel processing
 RUN npm run build
 
 # Expose the port the app runs on
