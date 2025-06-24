@@ -39,10 +39,10 @@ ENV NODE_ENV=production
 ENV NODE_OPTIONS="--http-parser=legacy --max-http-header-size=16384"
 
 # Build the Next.js application
-# RUN npm run build
+RUN npm run build
 
 # Expose the port the app runs on
 EXPOSE 3000
 
 # Command to run the application
-CMD ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
+CMD ["npm", "run", "start", "--", "-H", "0.0.0.0"]
