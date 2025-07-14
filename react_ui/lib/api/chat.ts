@@ -489,6 +489,7 @@ export async function sendChatRequest({
   maxTokens = 1024,
   temperature = 0.6,
   useMemory = false,
+  useSwarm = false,
   extraParams = {}
 }: {
   messages: Message[];
@@ -499,6 +500,7 @@ export async function sendChatRequest({
   maxTokens?: number;
   temperature?: number;
   useMemory?: boolean;
+  useSwarm?: boolean;
   extraParams?: Record<string, any>;
 }) {
   const baseUrl = getBaseUrl();
@@ -511,7 +513,8 @@ export async function sendChatRequest({
     stream,
     temperature,
     max_tokens: maxTokens,
-    use_mem: useMemory
+    use_mem: useMemory,
+    use_swarm: useSwarm
   };
   
   try {

@@ -42,7 +42,7 @@ class ChatCompletionRequest(BaseModel):
     top_p: float = 0.9
     top_k: int = 250
     extra_params : Optional[dict] = {}
-    stream: Optional[bool] = None
+    stream: Optional[bool] = True
     tools: Optional[List[dict]] = []
     options: Optional[dict] = {}
     keep_session: Optional[bool] = False

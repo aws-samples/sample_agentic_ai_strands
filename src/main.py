@@ -116,7 +116,7 @@ async def initialize_user_servers(session: UserSession):
     # 合并全局和用户的servers
     server_configs = {**server_configs, **global_server_configs}
     
-    logger.info(f"server_configs:{server_configs}")
+    # logger.info(f"server_configs:{server_configs}")
     # 初始化服务器连接
     for server_id, config in server_configs.items():
         if server_id in session.mcp_clients:  # 跳过已存在的服务器

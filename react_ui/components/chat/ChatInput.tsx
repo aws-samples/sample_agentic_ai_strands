@@ -40,7 +40,8 @@ export function ChatInput({ disabled = false, onLoadingChange }: ChatInputProps)
     temperature,
     budgetTokens,
     onlyNMostRecentImages,
-    useMemory
+    useMemory,
+    useSwarm
   } = useStore();
   
   // Get selected server IDs from mcpServers
@@ -204,6 +205,7 @@ export function ChatInput({ disabled = false, onLoadingChange }: ChatInputProps)
           maxTokens,
           temperature,
           useMemory,
+          useSwarm,
           extraParams
         });
         
@@ -379,6 +381,7 @@ export function ChatInput({ disabled = false, onLoadingChange }: ChatInputProps)
           maxTokens,
           temperature,
           useMemory,
+          useSwarm,
           extraParams
         });
         // Extract thinking from message

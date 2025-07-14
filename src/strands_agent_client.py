@@ -18,11 +18,10 @@ from chat_client import ChatClient
 from mcp_client_strands import StrandsMCPClient
 from strands.agent.conversation_manager import SlidingWindowConversationManager
 from botocore.config import Config
-from custom_tools import mem0_memory
+from custom_tools import mem0_memory,swarm
 from strands.telemetry import StrandsTelemetry
 from constant import *
 load_dotenv()  # load environment variables from .env
-from strands_tools import swarm
 
 import base64
 import os
@@ -244,13 +243,12 @@ class StrandsAgentClient(ChatClient):
         # 如果配置了PG Database,添加memory tool
         if os.environ.get("POSTGRESQL_HOST") and use_mem:
             tools += [mem0_memory]
-            
-        if use_swarm:
-            tools += [swarm]
         
         logger.info(f"load tools:{[tool.tool_name for tool in tools]}")
-        # add stop tool
-        # tools += [stop]
+
+        if use_swarm:
+            tools += [swarm]
+
         # Create agent
         agent = Agent(
             model=model,
@@ -258,7 +256,7 @@ class StrandsAgentClient(ChatClient):
             conversation_manager = SlidingWindowConversationManager(
                 window_size=window_size,  # Maximum number of message pairs to keep
             ),
-            # callback_handler=None,
+            callback_handler=None,
             system_prompt=system_prompt or "You are a helpful assistant.",
             tools=tools,
             load_tools_from_directory=False

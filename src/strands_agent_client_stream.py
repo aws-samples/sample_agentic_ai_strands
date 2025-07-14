@@ -100,7 +100,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
             logger.info(f"Stopped monitor thread for stream: {stream_id}")
             self._stop_agent_thread(stream_id)
     
-    def _start_agent_thread(self, stream_id: str, prompt: str):
+    def _start_agent_thread(self, stream_id: str, prompt: str,**kwargs:dict):
         """Start an agent processing thread for the given stream"""
         if stream_id in self.agent_threads:
             logger.warning(f"Agent thread for stream {stream_id} already exists")
@@ -114,11 +114,11 @@ class StrandsAgentClientStream(StrandsAgentClient):
         import queue
         stream_queue = queue.Queue()
         self.stream_queues[stream_id] = stream_queue
-        
+        use_swarm = kwargs.get("kwargs")
         # Create and start agent thread
         agent_thread = threading.Thread(
             target=self._run_agent_stream,
-            args=(stream_id, prompt, stop_event, stream_queue),
+            args=(stream_id, prompt, stop_event, stream_queue,use_swarm),
             daemon=True,
             name=f"AgentStream-{stream_id}"
         )
@@ -164,7 +164,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
                 pass  # Queue might be empty or have other issues
             del self.stream_queues[stream_id]
     
-    def _run_agent_stream(self, stream_id: str, prompt: str, stop_event: threading.Event, stream_queue):
+    def _run_agent_stream(self, stream_id: str, prompt: str, stop_event: threading.Event, stream_queue,use_swarm):
         """Run agent stream processing in a separate thread"""
         logger.info(f"Agent thread started for stream: {stream_id}")
         
@@ -174,7 +174,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
             asyncio.set_event_loop(loop)
             
             # Run the agent stream processing
-            loop.run_until_complete(self._agent_stream_worker(stream_id, prompt, stop_event, stream_queue))
+            loop.run_until_complete(self._agent_stream_worker(stream_id, prompt, stop_event, stream_queue,use_swarm))
             
         except Exception as e:
             logger.error(f"Error in agent thread for stream {stream_id}: {e}")
@@ -183,7 +183,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
         finally:
             logger.info(f"Agent thread for stream {stream_id} terminated")
     
-    async def _agent_stream_worker(self, stream_id: str, prompt: str, stop_event: threading.Event, stream_queue):
+    async def _agent_stream_worker(self, stream_id: str, prompt: str, stop_event: threading.Event, stream_queue,use_swarm):
         """Async worker for agent stream processing"""
         try:
             if not self.agent:
@@ -388,9 +388,13 @@ class StrandsAgentClientStream(StrandsAgentClient):
         if not stream_id:
             yield {"type": "error", "data": {"message": "无stream id"}}
             return
-            
+        kwargs = dict(use_swarm=use_swarm)
+        
+        if use_swarm:
+            prompt += "\nUse swarm tool to create a team of size 3, coordination_pattern is collaborative to discuss the plan first."
+        
         # Start agent thread to handle stream processing
-        self._start_agent_thread(stream_id, prompt)
+        self._start_agent_thread(stream_id, prompt,**kwargs)
         
         # Get events from agent thread via queue
         stream_queue = self.stream_queues[stream_id]
@@ -472,7 +476,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
                     new_event = {'type':'result_pairs','data':{'stopReason':'tool_use','tool_results':tool_results}}
                     yield new_event
                     sent_results_history[toolUseId] = toolUseId
-                    # logger.info(new_event)
+                    # logger.info(f"tool_results_serializable:{tool_results_serializable}")
                 
             if event["type"] == "message_stop":
                 # Save the system to session
