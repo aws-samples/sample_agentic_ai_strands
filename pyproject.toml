@@ -1,14 +1,12 @@
 [project]
-name = "strands-agent-mcp"
+name = "strands-agentcore-mcp"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "aiohttp>=3.11.16",
-    "aws-sdk-bedrock-runtime>=0.0.2",
-    "boto3>=1.37.29",
-    "botocore>=1.37.29",
+    "boto3>=1.39.8",
+    "botocore>=1.39.8",
     "fastapi>=0.115.6",
     "mcp>=1.6.0",
     "openai>=1.75.0",
@@ -17,13 +15,13 @@ dependencies = [
     "pytz>=2024.2",
     "requests>=2.32.3",
     "rx>=3.2.0",
-    "smithy-aws-core>=0.0.1",
     "tzdata>=2024.2",
     "uvicorn>=0.34.0",
-    "strands-agents==0.3.0",
+    "strands-agents>=1.0.0",
     "strands-agents[otel]",
-    "strands-agents-tools==0.1.9",
-    "strands-agents-tools[mem0_memory]",
-    "rich>=13.7.1",
-    "psycopg2-binary>=2.9.10"
+    "strands-agents-tools[mem0_memory]>=0.2.1",
+    "bedrock-agentcore",
+    "bedrock-agentcore-starter-toolkit",
+    "playwright",
+    "nest_asyncio"
 ]

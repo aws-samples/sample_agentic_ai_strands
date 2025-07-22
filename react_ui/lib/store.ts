@@ -73,6 +73,10 @@ interface ChatStore {
   setUseMemory: (enabled: boolean) => void
   useSwarm: boolean
   setUseSwarm: (enabled: boolean) => void
+  useCodeInterpreter: boolean
+  setUseCodeInterpreter: (enabled: boolean) => void
+  useBrowser: boolean
+  setUseBrowser: (enabled: boolean) => void
   
   // Models
   models: Model[]
@@ -160,6 +164,10 @@ Please use the maximum computational power and token limit available in a single
       setUseMemory: (enabled) => set({ useMemory: enabled }),
       useSwarm: false,
       setUseSwarm: (enabled) => set({ useSwarm: enabled }),
+      useCodeInterpreter: false,
+      setUseCodeInterpreter: (enabled) => set({ useCodeInterpreter: enabled }),
+      useBrowser: false,
+      setUseBrowser: (enabled) => set({ useBrowser: enabled }),
       
       // Models
       models: [],

@@ -1,0 +1,13 @@
+strands-agents>=1.0.0
+strands-agents[openai]
+strands-agents-tools[use_browser]>=0.2.1
+playwright
+uv
+mcp
+python-dotenv
+fastapi
+nest_asyncio
+aws-opentelemetry-distro>=0.10.0
+bedrock-agentcore
+bedrock-agentcore-starter-toolkit
+nova-act

@@ -490,6 +490,8 @@ export async function sendChatRequest({
   temperature = 0.6,
   useMemory = false,
   useSwarm = false,
+  useCodeInterpreter = false,
+  useBrowser = false,
   extraParams = {}
 }: {
   messages: Message[];
@@ -501,6 +503,8 @@ export async function sendChatRequest({
   temperature?: number;
   useMemory?: boolean;
   useSwarm?: boolean;
+  useCodeInterpreter?: boolean;
+  useBrowser?: boolean;
   extraParams?: Record<string, any>;
 }) {
   const baseUrl = getBaseUrl();
@@ -509,12 +513,16 @@ export async function sendChatRequest({
     messages,
     model: modelId,
     mcp_server_ids: mcpServerIds,
-    extra_params: extraParams,
+    extra_params: {
+      ...extraParams,
+      use_mem: useMemory,
+      use_swarm: useSwarm,
+      use_code_interpreter: useCodeInterpreter,
+      use_browser: useBrowser
+    },
     stream,
     temperature,
-    max_tokens: maxTokens,
-    use_mem: useMemory,
-    use_swarm: useSwarm
+    max_tokens: maxTokens
   };
   
   try {

@@ -33,6 +33,10 @@ export default function Sidebar({ onClose }: SidebarProps) {
     setUseMemory,
     useSwarm,
     setUseSwarm,
+    useCodeInterpreter,
+    setUseCodeInterpreter,
+    useBrowser,
+    setUseBrowser,
     clearMessages,
     userId,
     setUserId,
@@ -241,7 +245,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 onCheckedChange={setEnableStream}
               />
             </div> */}
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <label htmlFor="use-swarm" className="text-sm font-medium">
                 Use Swarm
               </label>
@@ -250,7 +254,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 checked={useSwarm}
                 onCheckedChange={setUseSwarm}
               />
-            </div>
+            </div> */}
             <div className="flex items-center justify-between">
               <label htmlFor="use-memory" className="text-sm font-medium">
                 Use Memory
@@ -262,7 +266,27 @@ export default function Sidebar({ onClose }: SidebarProps) {
               />
             </div>
 
+            <div className="flex items-center justify-between">
+              <label htmlFor="use-code-interpreter" className="text-sm font-medium">
+                Use Code Interpreter
+              </label>
+              <Switch
+                id="use-code-interpreter"
+                checked={useCodeInterpreter}
+                onCheckedChange={setUseCodeInterpreter}
+              />
+            </div>
 
+            <div className="flex items-center justify-between">
+              <label htmlFor="use-browser" className="text-sm font-medium">
+                Use Browser
+              </label>
+              <Switch
+                id="use-browser"
+                checked={useBrowser}
+                onCheckedChange={setUseBrowser}
+              />
+            </div>
 
             <button
               onClick={clearMessages}

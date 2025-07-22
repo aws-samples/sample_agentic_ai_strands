@@ -47,8 +47,7 @@ class ChatCompletionRequest(BaseModel):
     options: Optional[dict] = {}
     keep_session: Optional[bool] = False
     mcp_server_ids: Optional[List[str]] = []
-    use_mem: Optional[bool] = False
-    use_swarm: Optional[bool] = False
+    stream_id: Optional[str] = "default-stream-id"
 
 class ChatResponse(BaseModel):
     id: str
@@ -57,7 +56,10 @@ class ChatResponse(BaseModel):
     model: str
     choices: List[Dict[str, Any]]
     usage: Dict[str, int]
-
+    
+class StopStreamRequest(BaseModel):
+    stream_id: str = ''
+    
 class AddMCPServerRequest(BaseModel):
     server_id: str = ''
     server_desc: str = ''
@@ -70,3 +72,8 @@ class AddMCPServerResponse(BaseModel):
     errno: int
     msg: str = "ok"
     data: Dict[str, Any] = Field(default_factory=dict)
+    
+class OperationsRequest(BaseModel):
+    user_id:str
+    request_type: Literal["chatcompletion",'stopstream','removehistory']
+    data: Union[StopStreamRequest,ChatCompletionRequest]

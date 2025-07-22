@@ -5,6 +5,8 @@ __pycache__/
 .env.local
 .DS_Store
 cdk-outputs.env
+agentcore_scripts/iam-role.txt
+agentcore_scripts/identity.txt
 # C extensions
 *.so
 *.csv
@@ -16,11 +18,14 @@ dist/
 downloads/
 eggs/
 .eggs/
+.vscode/
+screenshots/
 .promptx/
 lib64/
 parts/
 sdist/
 var/
+runtime.env
 wheels/
 share/python-wheels/
 *.egg-info/

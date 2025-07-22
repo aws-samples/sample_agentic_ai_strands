@@ -18,7 +18,12 @@ from chat_client import ChatClient
 from mcp_client_strands import StrandsMCPClient
 from strands.agent.conversation_manager import SlidingWindowConversationManager
 from botocore.config import Config
-from custom_tools import mem0_memory,swarm
+from custom_tools import mem0_memory
+from strands_tools.agent_core_memory import AgentCoreMemoryToolProvider
+from strands_tools.code_interpreter import AgentCoreCodeInterpreter
+from strands_tools.browser import AgentCoreBrowser
+from custom_tools.memory_hook import AgentMemoryHooks
+from utils import generate_id_from_string
 from strands.telemetry import StrandsTelemetry
 from constant import *
 load_dotenv()  # load environment variables from .env
@@ -59,6 +64,9 @@ class StrandsAgentClient(ChatClient):
         # Initialize agent
         self.agent = None
         self.mcp_tools = {}  # Store MCP tools for reuse
+        
+        self.browser = None
+        self.code_interpreter = None
         
     def _get_model(self, model_id, thinking, thinking_budget, max_tokens=1024, temperature=0.7):
         """Get the appropriate model based on provider"""
@@ -226,12 +234,21 @@ class StrandsAgentClient(ChatClient):
         
         return tools
     
-    async def _create_agent_with_tools(self, model_id, messages,mcp_clients=None, mcp_server_ids=None, system_prompt=None,thinking=True, 
+    async def _create_agent_with_tools(self, 
+                                       model_id, 
+                                       messages,
+                                       user_id=None,
+                                       mcp_clients=None,
+                                       mcp_server_ids=None, 
+                                       system_prompt=None,
+                                       thinking=True, 
                                        thinking_budget=4096,
                                        max_tokens=1024,
                                        temperature=0.7,
                                        use_mem=False,
-                                       use_swarm=False):
+                                       use_swarm=False,
+                                       use_browser=False,
+                                       use_code_interpreter=False):
         """Create a Strands agent with MCP tools"""
         
         # Create MCP tools
@@ -240,18 +257,57 @@ class StrandsAgentClient(ChatClient):
         # Get the model
         model = self._get_model(model_id,thinking=thinking, thinking_budget=thinking_budget,max_tokens=max_tokens, temperature=temperature)
         
+        agent_hooks = []
+
         # 如果配置了PG Database,添加memory tool
-        if os.environ.get("POSTGRESQL_HOST") and use_mem:
-            tools += [mem0_memory]
+        if use_mem:
+            if os.environ.get("POSTGRESQL_HOST"): 
+                tools += [mem0_memory]
+            elif memory_id:=os.environ.get("MEMORY_ID"): # 使用agentcore memory
+                from bedrock_agentcore.memory import MemoryClient
+                from datetime import datetime
+
+                # Initialize Memory Client
+                mem_client = MemoryClient(region_name=os.environ.get("AGENTCORE_REGION","us-west-2"))
+                # 使用 memory hooks 
+                
+                # To do 暂时用小时区分
+                SESSION_ID = f"{user_id}_{datetime.now().strftime('%Y%m%d%H')}"
+                mem_hooks = AgentMemoryHooks(
+                    memory_id=memory_id,
+                    client=mem_client,
+                    actor_id=user_id,
+                    session_id=SESSION_ID
+                )
+                # add to hooks
+                agent_hooks.append(mem_hooks)
+                
+                memory_provider = AgentCoreMemoryToolProvider(
+                    memory_id=memory_id,
+                    actor_id=user_id,
+                    namespace=mem_hooks.namespaces,
+                    session_id=SESSION_ID,
+                    region=os.environ.get("AGENTCORE_REGION","us-west-2")
+                    )
+                # add tools for memory
+                tools += memory_provider.tools
+                
+            else:
+                logger.warning("no POSTGRESQL_HOST or AgentCore MEMORY_ID provided, memory is disabled")
+        if use_code_interpreter:
+            self.code_interpreter = AgentCoreCodeInterpreter(
+                region=os.environ.get("AGENTCORE_REGION","us-west-2")) 
+            tools += [self.code_interpreter.code_interpreter]
+        
+        if use_browser:
+            self.browser = AgentCoreBrowser(region=os.environ.get("AGENTCORE_REGION","us-west-2"))
+            tools += [self.browser.browser]
         
         logger.info(f"load tools:{[tool.tool_name for tool in tools]}")
-
-        if use_swarm:
-            tools += [swarm]
-
         # Create agent
         agent = Agent(
             model=model,
+            hooks=agent_hooks,
             messages=messages,
             conversation_manager = SlidingWindowConversationManager(
                 window_size=window_size,  # Maximum number of message pairs to keep

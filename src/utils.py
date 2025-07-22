@@ -18,6 +18,8 @@ from dotenv import load_dotenv
 from urllib.parse import urlparse
 from botocore.exceptions import ClientError
 import asyncio
+import uuid
+
 # Initialize logger
 
 logging.basicConfig(
@@ -29,7 +31,8 @@ logger = logging.getLogger(__name__)
 load_dotenv()  # load env vars from .env
 # DynamoDB 客户端
 dynamodb_client = None
-DDB_TABLE = os.environ.get("ddb_table")  # DynamoDB表名，用于存储用户配置
+DDB_TABLE = os.environ.get("ddb_table","mcp_user_config_table")  # DynamoDB表名，用于存储用户配置
+logger.info(f"DDB_TABLE={DDB_TABLE}")
 user_mcp_server_configs = {}  # 用户特有的MCP服务器配置 user_id -> {server_id: config}
 global_mcp_server_configs = {}  # 全局MCP服务器配置 server_id -> config
 # 活跃流式请求的字典，用于跟踪可以停止的请求
@@ -37,6 +40,14 @@ active_streams = {}
 # 使用独立的锁来保护active_streams字典
 active_streams_lock = threading.RLock()
 session_lock = threading.RLock()
+
+
+def generate_id_from_string(input_string):
+    # 基于输入字符串生成UUID5
+    namespace = uuid.NAMESPACE_DNS  # 使用预定义的命名空间
+    unique_id = uuid.uuid5(namespace, input_string)
+    # 转为字符串并确保长度为33
+    return str(unique_id).replace('-', '')[:33].ljust(33, '0')
 
 def get_secret(secret_name):
     # Create a Secrets Manager client
@@ -232,40 +243,17 @@ async def save_stream_id(stream_id:str,user_id:str):
 # Get stream id
 async def get_stream_id(stream_id:str):
     with active_streams_lock:
-        if DDB_TABLE and dynamodb_client:
-            # 尝试从DynamoDB获取
-            ddb_config = await get_from_ddb(stream_id)
-            if ddb_config:
-                return ddb_config.get('user_id')
-            else:
-                return None
-        else:
-            return active_streams.get(stream_id)
+        return active_streams.get(stream_id)
     
 def get_stream_id_sync(stream_id:str):
     with active_streams_lock:
-        if DDB_TABLE and dynamodb_client:
-            # 尝试从DynamoDB获取
-            ddb_config = get_from_ddb_sync(stream_id)
-            if ddb_config:
-                return ddb_config.get('user_id')
-            else:
-                return None
-        else:
-            return active_streams.get(stream_id)    
+        return active_streams.get(stream_id)    
 
 
 # delete stream id
 async def delete_stream_id(stream_id:str):
     with active_streams_lock:
-        if DDB_TABLE and dynamodb_client:
-            # 尝试从DynamoDB获取
-            await delete_from_ddb(stream_id)
-
-        else:
-            if stream_id in active_streams:
-                active_streams.pop(stream_id, None)
-
+        active_streams.pop(stream_id, None)
         
 
 # 保存全局MCP服务器配置
@@ -300,7 +288,7 @@ async def delete_user_server_config(user_id: str, server_id: str):
 
 
 # 保存用户MCP服务器配置
-async def save_user_server_config(user_id: str, server_id: str, config: dict):
+async def save_user_server_config(user_id: str, server_id: str, config: dict) -> bool:
     """保存用户的MCP服务器配置"""
     global user_mcp_server_configs
     
@@ -314,14 +302,18 @@ async def save_user_server_config(user_id: str, server_id: str, config: dict):
             #获取原有的记录
             ddb_config = await get_from_ddb(user_id)
             ddb_config[server_id] = config
-            await save_to_ddb(user_id, ddb_config)
-            logger.info(f"已保存用户 {user_id} 配置到DynamoDB")
+            ret = await save_to_ddb(user_id, ddb_config)
+            if ret:
+                logger.info(f"已保存用户 {user_id} 配置到DynamoDB")
+                return ret
+            else:
+                logger.info(f"保存用户 {user_id} 配置到DynamoDB失败")
+                return ret
         else:
-            try:
-                save_configs_to_json(user_mcp_server_configs)
-                logger.info(f"已保存用户 {user_id} 配置到config_file")
-            except Exception as e:
-                logger.error(f"保存用户MCP配置到文件失败: {e}")
+            logger.info(f"DDB_TABLE is null")
+            return False
+            
+
 
 # 获取用户MCP服务器配置
 async def get_user_server_configs(user_id: str) -> dict:
