@@ -146,7 +146,8 @@ async def initialize_user_servers(session: UserSession):
 
 async def get_or_create_user_session(
     user_id: str,
-    create_new = True
+    create_new = True,
+    init_mcp = True,
 ):
     """获取或创建用户会话，并自动初始化用户服务器"""
     global user_sessions
@@ -160,7 +161,8 @@ async def get_or_create_user_session(
     else:
         session =  user_sessions[user_id]
     # 从ddb中取出配置，重新初始化，如果已经存在则跳过。
-    await initialize_user_servers(session)
+    if init_mcp:
+        await initialize_user_servers(session)
     return session
 
 
@@ -458,6 +460,20 @@ async def stream_chat_response(data: ChatCompletionRequest, session: UserSession
                             }]
                         }
                         yield f"data: {json.dumps(event_data)}\n\n"
+                    elif response["data"]["stopReason"] == 'end_turn':
+                        event_data = {
+                            "id": f"stop{time.time_ns()}",
+                            "object": "chat.completion.chunk",
+                            "created": int(time.time()),
+                            "model": data.model,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {},
+                                "finish_reason": "end_turn"
+                            }]
+                        }
+                        yield f"data: {json.dumps(event_data)}\n\n"
+                        
                     yield "data: [DONE]\n\n"
                     break
             
@@ -494,8 +510,12 @@ async def stream_chat_response(data: ChatCompletionRequest, session: UserSession
 async def remove_history(
     user_id:str,
 ):
-    # 直接从ddb里删除记录即可
-    await delete_user_message(user_id)
+    # 获取用户会话
+    session = await get_or_create_user_session(user_id,init_mcp=False)
+    if session:
+        logger.info("remove_history")
+        await session.chat_client.clear_history()
+        
 
 async def stop_stream(
     user_id: str,

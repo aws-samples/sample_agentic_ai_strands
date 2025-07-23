@@ -5,10 +5,17 @@ SPDX-License-Identifier: MIT-0
 import os
 from dotenv import load_dotenv
 from utils import get_user_message,save_user_message,delete_user_message,DDB_TABLE
+from custom_tools.agent_core_memory import AgentCoreMemoryToolProvider
+
 import pandas as pd
 from constant import *
 load_dotenv()  # load environment variables from .env
-
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
+)
+logger = logging.getLogger(__name__)
 class ChatClient:
     """chat wrapper"""
     def __init__(self, credential_file='',user_id='', access_key_id='', secret_access_key='', region=''):
@@ -23,25 +30,43 @@ class ChatClient:
         self.system = None
         self.agent = None
         self.user_id = user_id
+        SESSION_ID = user_id
+        if memory_id:=os.environ.get("MEMORY_ID"):
+            self.memory_provider = AgentCoreMemoryToolProvider(
+                            memory_id=memory_id,
+                            actor_id=user_id,
+                            session_id=SESSION_ID,
+                            region=os.environ.get("AGENTCORE_REGION","us-west-2")
+                            )
+            logger.info(f"Initialized AgentCoreMemoryToolProvider with memory id:{memory_id}")
+        else:
+            self.memory_provider = None
     
     async def clear_history(self):
         """clear session message of this client"""
         self.messages = []
         self.system = None
-        if DDB_TABLE:
-            await delete_user_message(self.user_id)
+        if self.memory_provider:
+            self.memory_provider.delete_all_events(self.user_id)
     
     async def save_history(self):
-        if self.agent:
-            self.messages = self.agent.messages
-            if DDB_TABLE:
-                await save_user_message(self.user_id,self.messages)
+        pass
+        return 
+    
+        # use agentcore memory instead
+        # if self.agent:
+        #     self.messages = self.agent.messages
+        #     if DDB_TABLE:
+        #         await save_user_message(self.user_id,self.messages)
             
     async def load_history(self):
-        if DDB_TABLE:
-            return await get_user_message(self.user_id)
-        else:
-            return self.messages 
+        pass
+        return []
+        # use agentcore memory instead
+        # if DDB_TABLE:
+        #     return await get_user_message(self.user_id)
+        # else:
+        #     return self.messages 
 
             
     

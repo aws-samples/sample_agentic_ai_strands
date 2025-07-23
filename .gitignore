@@ -10,6 +10,8 @@ agentcore_scripts/identity.txt
 # C extensions
 *.so
 *.csv
+.kiro/
+steering/
 # Distribution / packaging
 .Python
 build/

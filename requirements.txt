@@ -1,6 +1,6 @@
 strands-agents>=1.0.0
 strands-agents[openai]
-strands-agents-tools[use_browser]>=0.2.1
+strands-agents-tools>=0.2.1
 playwright
 uv
 mcp
@@ -10,4 +10,5 @@ nest_asyncio
 aws-opentelemetry-distro>=0.10.0
 bedrock-agentcore
 bedrock-agentcore-starter-toolkit
-nova-act
+langchain-aws
+browser-use<0.3.3

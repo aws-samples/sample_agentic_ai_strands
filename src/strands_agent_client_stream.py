@@ -299,23 +299,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
                 # Handle metadata
                 if "metadata" in event:
                     yield {"type": "metadata", "data": event["metadata"]}
-                    continue
-    
-    def clean_builtin_tools(self):
-        """clean resources of  agentcore code interpreter and browsers
-        """
-        logger.info("clean_builtin_tools")
-        if self.code_interpreter:
-            logger.info("closing code_interpreter")
-            self.code_interpreter.cleanup_platform()
-            elf.code_interpreter = None
-        if self.browser:
-            logger.info("closing browser")
-            self.browser.close_platform()
-            self.browser = None
-
-
-            
+                    continue        
         
     async def process_query_stream(self,
             model_id="", 
@@ -422,7 +406,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
         while True:
             try:
                 event = stream_queue.get(timeout=1)
-                print(event)
+                # logger.info(event)
                 # Check if stream should stop
                 if stream_id in self.stop_flags and self.stop_flags[stream_id]:
                     logger.info(f"Stream {stream_id} was requested to stop")

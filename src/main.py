@@ -137,15 +137,15 @@ async def remove_history(
     
     logger.info(f"remove history for user:{user_id}")
     # 直接从ddb里删除记录即可
-    await delete_user_message(user_id)
-    # runtime_id = generate_id_from_string(user_id)
+    # await delete_user_message(user_id)
+    runtime_id = generate_id_from_string(user_id)
     
-    # payload = {
-    #     "user_id":user_id,
-    #     "request_type":"removehistory"
-    # }
+    payload = {
+        "user_id":user_id,
+        "request_type":"removehistory"
+    }
     
-    # response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload)
+    response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload)
     
     return JSONResponse(
             content={"errno": 0, "msg": "removed history"},

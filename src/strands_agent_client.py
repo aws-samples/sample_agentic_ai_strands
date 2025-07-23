@@ -19,10 +19,12 @@ from mcp_client_strands import StrandsMCPClient
 from strands.agent.conversation_manager import SlidingWindowConversationManager
 from botocore.config import Config
 from custom_tools import mem0_memory
-from strands_tools.agent_core_memory import AgentCoreMemoryToolProvider
+from custom_tools.agent_core_memory import AgentCoreMemoryToolProvider
 from strands_tools.code_interpreter import AgentCoreCodeInterpreter
 from strands_tools.browser import AgentCoreBrowser
 from custom_tools.memory_hook import AgentMemoryHooks
+# from custom_tools.browser_mcp import BrowserMCPClient
+from custom_tools.browser_use_tool import BrowserUseTool
 from utils import generate_id_from_string
 from strands.telemetry import StrandsTelemetry
 from constant import *
@@ -234,6 +236,19 @@ class StrandsAgentClient(ChatClient):
         
         return tools
     
+    def clean_builtin_tools(self):
+        """clean resources of  agentcore code interpreter and browsers
+        """
+        logger.info("clean_builtin_tools")
+        if self.code_interpreter:
+            logger.info("closing code_interpreter")
+            self.code_interpreter.cleanup_platform()
+            elf.code_interpreter = None
+        if self.browser:
+            logger.info("closing browser")
+            self.browser.close_platform()
+            self.browser = None
+            
     async def _create_agent_with_tools(self, 
                                        model_id, 
                                        messages,
@@ -264,33 +279,19 @@ class StrandsAgentClient(ChatClient):
             if os.environ.get("POSTGRESQL_HOST"): 
                 tools += [mem0_memory]
             elif memory_id:=os.environ.get("MEMORY_ID"): # 使用agentcore memory
-                from bedrock_agentcore.memory import MemoryClient
-                from datetime import datetime
-
-                # Initialize Memory Client
-                mem_client = MemoryClient(region_name=os.environ.get("AGENTCORE_REGION","us-west-2"))
                 # 使用 memory hooks 
-                
-                # To do 暂时用小时区分
-                SESSION_ID = f"{user_id}_{datetime.now().strftime('%Y%m%d%H')}"
+                # 单用户单session
+                SESSION_ID = f"{user_id}"
                 mem_hooks = AgentMemoryHooks(
                     memory_id=memory_id,
-                    client=mem_client,
                     actor_id=user_id,
                     session_id=SESSION_ID
                 )
                 # add to hooks
                 agent_hooks.append(mem_hooks)
-                
-                memory_provider = AgentCoreMemoryToolProvider(
-                    memory_id=memory_id,
-                    actor_id=user_id,
-                    namespace=mem_hooks.namespaces,
-                    session_id=SESSION_ID,
-                    region=os.environ.get("AGENTCORE_REGION","us-west-2")
-                    )
-                # add tools for memory
-                tools += memory_provider.tools
+                if self.memory_provider:
+                    # add tools for memory
+                    tools += self.memory_provider.tools
                 
             else:
                 logger.warning("no POSTGRESQL_HOST or AgentCore MEMORY_ID provided, memory is disabled")
@@ -300,18 +301,19 @@ class StrandsAgentClient(ChatClient):
             tools += [self.code_interpreter.code_interpreter]
         
         if use_browser:
-            self.browser = AgentCoreBrowser(region=os.environ.get("AGENTCORE_REGION","us-west-2"))
-            tools += [self.browser.browser]
-        
+            # self.browser = BrowserMCPClient(region=os.environ.get("AGENTCORE_REGION","us-west-2"))
+            # self.browser.start()
+            self.browser = BrowserUseTool(region=os.environ.get("AGENTCORE_REGION","us-west-2"),model_id=model_id,use_vision=True)
+            tools += self.browser.tools        
         logger.info(f"load tools:{[tool.tool_name for tool in tools]}")
         # Create agent
         agent = Agent(
             model=model,
             hooks=agent_hooks,
-            messages=messages,
-            conversation_manager = SlidingWindowConversationManager(
-                window_size=window_size,  # Maximum number of message pairs to keep
-            ),
+            # messages=messages, use agentcore mem hook
+            # conversation_manager = SlidingWindowConversationManager(
+            #     window_size=window_size,  # Maximum number of message pairs to keep
+            # ),
             callback_handler=None,
             system_prompt=system_prompt or "You are a helpful assistant.",
             tools=tools,

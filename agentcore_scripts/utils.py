@@ -2,8 +2,66 @@ import boto3
 import json
 import time
 from boto3.session import Session
+from bedrock_agentcore.memory import MemoryClient
+from bedrock_agentcore.memory.constants import StrategyType
+from botocore.exceptions import ClientError
 
 
+def setup_memclient():
+    boto_session = Session()
+    region = boto_session.region_name
+    # Initialize Memory Client
+    client = MemoryClient(region_name=region)
+    memory_name = "AgentMemory"
+
+    # Define memory strategies for customer support
+    strategies = [
+        {
+            StrategyType.USER_PREFERENCE.value: {
+                "name": "UserPreferences",
+                "description": "Captures customer preferences and behavior",
+                "namespaces": ["user/{actorId}/preferences"]
+            }
+        },
+        {
+            StrategyType.SEMANTIC.value: {
+                "name": "FactsSemantic",
+                "description": "Stores facts from conversations",
+                "namespaces": ["user/{actorId}/semantic"],
+            }
+        }
+    ]
+    print(f"Creating memory: {memory_name}")
+    # Create memory resource
+    try:
+        memory = client.create_memory_and_wait(
+            name=memory_name,
+            strategies=strategies,         # Define the memory strategies
+            description="Memory for strands agent",
+            event_expiry_days=30,          # Memories expire after 90 days
+        )
+        memory_id = memory['id']
+        print(f"✅ Created memory: {memory_id}")
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ValidationException' and "already exists" in str(e):
+            # If memory already exists, retrieve its ID
+            memories = client.list_memories()
+            memory_id = next((m['id'] for m in memories if m['id'].startswith(memory_name)), None)
+            print(f"Memory already exists. Using existing memory ID: {memory_id}")
+    except Exception as e:
+        # Handle any errors during memory creation
+        print(f"❌ ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        # Cleanup on error - delete the memory if it was partially created
+        if memory_id:
+            try:
+                client.delete_memory_and_wait(memoryId=memory_id,max_wait = 300)
+                print(f"Cleaned up memory: {memory_id}")
+            except Exception as cleanup_error:
+                print(f"Failed to clean up memory: {cleanup_error}")
+            
+            
 def get_user_token(client_id):
     boto_session = Session()
     region = boto_session.region_name
