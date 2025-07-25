@@ -1,0 +1,29 @@
+default_agent: mcp_server_s3_upload
+agents:
+  mcp_server_s3_upload:
+    name: mcp_server_s3_upload
+    entrypoint: /Users/chuanxie/Documents/code_dev/sample_agentic_ai_strands/agentcore_scripts/setup_mcp_gateway/mcp_server.py
+    platform: linux/arm64
+    container_runtime: docker
+    aws:
+      execution_role: arn:aws:iam::434444145045:role/agentcore-mcp_server_s3_upload-role
+      account: '434444145045'
+      region: us-west-2
+      ecr_repository: 434444145045.dkr.ecr.us-west-2.amazonaws.com/bedrock_agentcore-mcp_server_s3_upload
+      ecr_auto_create: false
+      network_configuration:
+        network_mode: PUBLIC
+      protocol_configuration:
+        server_protocol: MCP
+      observability:
+        enabled: true
+    bedrock_agentcore:
+      agent_id: mcp_server_s3_upload-ZAbhK27VeO
+      agent_arn: arn:aws:bedrock-agentcore:us-west-2:434444145045:runtime/mcp_server_s3_upload-ZAbhK27VeO
+      agent_session_id: null
+    authorizer_configuration:
+      customJWTAuthorizer:
+        allowedClients:
+        - ta98cj625hacop4540m4tu7ui
+        discoveryUrl: https://cognito-idp.us-west-2.amazonaws.com/us-west-2_GFOdP0oKH/.well-known/openid-configuration
+    oauth_configuration: null

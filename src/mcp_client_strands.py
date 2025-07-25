@@ -59,6 +59,7 @@ class StrandsMCPClient:
             http_type: Type of HTTP transport ('sse' or 'streamable_http')
             token: Authentication token for HTTP servers
         """
+        logger.info(f"connect_to_server:{server_id}:{token}")
         if server_id in self.active_clients:
             logger.warning(f"Server {server_id} is already connected")
             return

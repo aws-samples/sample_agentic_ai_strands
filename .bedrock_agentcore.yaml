@@ -2,7 +2,7 @@ default_agent: agent_runtime
 agents:
   agent_runtime:
     name: agent_runtime
-    entrypoint: src/agent_runtime.py
+    entrypoint: src/agentcore_runtime.py
     platform: linux/arm64
     container_runtime: docker
     aws:
@@ -18,8 +18,8 @@ agents:
       observability:
         enabled: true
     bedrock_agentcore:
-      agent_id: agent_runtime-iBIWWKHPC1
-      agent_arn: arn:aws:bedrock-agentcore:us-west-2:434444145045:runtime/agent_runtime-iBIWWKHPC1
+      agent_id: agent_runtime-VF0RLdG8eG
+      agent_arn: arn:aws:bedrock-agentcore:us-west-2:434444145045:runtime/agent_runtime-VF0RLdG8eG
       agent_session_id: null
     authorizer_configuration: null
     oauth_configuration: null

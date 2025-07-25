@@ -1,3 +1,5 @@
+import { fetchAuthSession } from 'aws-amplify/auth';
+
 // Cache for API key to avoid repeated requests
 let cachedApiKey: string | null = null;
 let apiKeyPromise: Promise<string> | null = null;
@@ -36,14 +38,49 @@ export async function getApiKey(): Promise<string> {
   }
 }
 
-// Helper function to get auth headers
-export const getAuthHeaders = async (userId: string) => {
-  const apiKey = await getApiKey()
-  // console.log(`apiKey:${apiKey}`)
+/**
+ * Get authentication headers with Cognito JWT token
+ */
+export const getAuthHeaders = async (userId?: string) => {
+  try {
+    // Try to get JWT token from Cognito first
+    const session = await fetchAuthSession();
+    const jwtToken = session.tokens?.accessToken?.toString();
+    
+    if (jwtToken) {
+      return {
+        'Authorization': `Bearer ${jwtToken}`,
+        'X-User-ID': userId || 'cognito-user',
+        'Content-Type': 'application/json'
+      };
+    }
+  } catch (error) {
+    console.log('No Cognito session found, falling back to API key');
+  }
+  
+  // Fallback to API key if no JWT token
+  const apiKey = await getApiKey();
   return {
     'Authorization': `Bearer ${apiKey}`,
-    'X-User-ID': userId,
+    'X-User-ID': userId || 'api-user',
     'Content-Type': 'application/json'
+  };
+}
+
+/**
+ * Get authentication headers with fallback support
+ */
+export const getAuthHeadersWithFallback = async (userId?: string) => {
+  try {
+    return await getAuthHeaders(userId);
+  } catch (error) {
+    console.error('Error getting auth headers:', error);
+    // Return basic headers as last resort
+    return {
+      'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY || '123456'}`,
+      'X-User-ID': userId || 'fallback-user',
+      'Content-Type': 'application/json'
+    };
   }
 }
 

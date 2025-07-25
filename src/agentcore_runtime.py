@@ -20,21 +20,15 @@ import threading
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from utils import  (get_global_server_configs,
-                    delete_user_message,
-                    save_global_server_config,
-                    delete_user_server_config,
                     get_user_server_configs,
-                    load_user_mcp_configs,
                     session_lock,
-                    DDB_TABLE,
                     save_user_server_config)
 from mcp_client_strands import StrandsMCPClient
 from contextlib import asynccontextmanager
 from opentelemetry import baggage, context
 from strands_agent_client_stream import StrandsAgentClientStream
-from utils import is_endpoint_sse,save_stream_id,get_stream_id,active_streams,delete_stream_id,delete_user_session,get_user_session,save_user_session
+from utils import is_endpoint_sse,save_stream_id,get_stream_id,active_streams,delete_stream_id
 from data_types import *
-from health import router as health_router
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 
 
@@ -77,8 +71,8 @@ class UserSession:
         self.chat_client = StrandsAgentClientStream(
             user_id=user_id,
             model_provider=os.environ.get('STRANDS_MODEL_PROVIDER', 'bedrock'),
-            api_key=os.environ.get('OPENAI_API_KEY'),
-            api_base=os.environ.get('OPENAI_BASE_URL')
+            api_key=os.environ.get('OPENAI_API_KEY',''),
+            api_base=os.environ.get('OPENAI_BASE_URL','')
         )
         self.mcp_clients = {}  # 用户特定的MCP客户端
         self.last_active = datetime.now()
@@ -99,7 +93,7 @@ class UserSession:
     
 
             
-async def initialize_user_servers(session: UserSession):
+async def initialize_user_servers(session: UserSession,mcp_server_ids = [],user_token=""):
     """初始化用户特有的MCP服务器"""
     user_id = session.user_id
     
@@ -113,6 +107,9 @@ async def initialize_user_servers(session: UserSession):
     # logger.info(f"server_configs:{server_configs}")
     # 初始化服务器连接
     for server_id, config in server_configs.items():
+        # 如果不在用户的请求request中，则跳过
+        if server_id not in mcp_server_ids:
+            continue
         if server_id in session.mcp_clients:  # 跳过已存在的服务器
             logger.info(f"skip {server_id} initialization ")
             continue
@@ -124,13 +121,13 @@ async def initialize_user_servers(session: UserSession):
             else:
                 raise ValueError("only support client_type strands")
             server_url = config.get('url',"")
-            
+            token = user_token if config.get('token') == "" else config.get('token')
             await mcp_client.connect_to_server(
                 server_id=server_id,
                 command=config.get('command'),
                 server_url=server_url,
                 http_type= "sse" if is_endpoint_sse(server_url) else "streamable_http" ,
-                token=config.get('token', None),
+                token=token,
                 server_script_args=config.get("args", []),
                 server_script_envs=config.get("env", {})
             )
@@ -146,8 +143,9 @@ async def initialize_user_servers(session: UserSession):
 
 async def get_or_create_user_session(
     user_id: str,
-    create_new = True,
     init_mcp = True,
+    mcp_server_ids = [],
+    user_token :str = "",
 ):
     """获取或创建用户会话，并自动初始化用户服务器"""
     global user_sessions
@@ -162,7 +160,7 @@ async def get_or_create_user_session(
         session =  user_sessions[user_id]
     # 从ddb中取出配置，重新初始化，如果已经存在则跳过。
     if init_mcp:
-        await initialize_user_servers(session)
+        await initialize_user_servers(session,mcp_server_ids,user_token=user_token)
     return session
 
 
@@ -576,11 +574,14 @@ async def chat_completions(
     data:ChatCompletionRequest,
     
 ):
+    mcp_server_ids = data.mcp_server_ids
     # Set session context for telemetry
     context_token = set_session_context(user_id)
+    # user token for agentcore mcp/gateway
+    user_token = data.token if data.token else ""
     # 获取用户会话
-    session = await get_or_create_user_session(user_id)
-    logger.info(session)
+    session = await get_or_create_user_session(user_id=user_id,mcp_server_ids=mcp_server_ids,user_token=user_token)
+    # logger.info(session)
     # 记录会话活动
     session.last_active = datetime.now()
     stream_id = data.stream_id

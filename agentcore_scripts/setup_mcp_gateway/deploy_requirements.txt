@@ -1,0 +1,6 @@
+botocore
+boto3
+mcp[cli]==1.11
+strands-agents==0.2
+bedrock-agentcore==0.1
+bedrock-agentcore-starter-toolkit==0.1

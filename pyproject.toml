@@ -23,5 +23,9 @@ dependencies = [
     "bedrock-agentcore",
     "bedrock-agentcore-starter-toolkit",
     "playwright",
-    "nest_asyncio"
+    "aws-opentelemetry-distro>=0.10.0",
+    "nest_asyncio",
+    "langchain-aws",
+    "browser-use<0.3.3",
+    "pyjwt"
 ]

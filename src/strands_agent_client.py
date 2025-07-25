@@ -243,7 +243,7 @@ class StrandsAgentClient(ChatClient):
         if self.code_interpreter:
             logger.info("closing code_interpreter")
             self.code_interpreter.cleanup_platform()
-            elf.code_interpreter = None
+            self.code_interpreter = None
         if self.browser:
             logger.info("closing browser")
             self.browser.close_platform()

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
-import { v4 as uuidv4 } from 'uuid'
+import { useAuth } from '@/components/providers/AuthProvider'
 import ModelSelector from './model-selector'
 import ServerList from './server-list'
 import AddServerDialog from './add-server-dialog'
@@ -16,12 +16,13 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<'chat' | 'servers'>('chat')
   const [showAddServer, setShowAddServer] = useState(false)
-  const [userIdInput, setUserIdInput] = useState('')
   
-  const { 
-    systemPrompt, 
-    setSystemPrompt, 
-    maxTokens, 
+  const { user } = useAuth()
+  
+  const {
+    systemPrompt,
+    setSystemPrompt,
+    maxTokens,
     setMaxTokens,
     temperature,
     setTemperature,
@@ -38,7 +39,6 @@ export default function Sidebar({ onClose }: SidebarProps) {
     useBrowser,
     setUseBrowser,
     clearMessages,
-    userId,
     setUserId,
     budgetTokens,
     setBudgetTokens,
@@ -46,26 +46,12 @@ export default function Sidebar({ onClose }: SidebarProps) {
     setOnlyNMostRecentImages
   } = useStore()
   
-  // Initialize user ID input field when component mounts or userId changes
+  // Auto-set user ID from authenticated user
   useEffect(() => {
-    if (userId) {
-      setUserIdInput(userId)
+    if (user?.userId) {
+      setUserId(user.userId)
     }
-  }, [userId])
-  
-  // Function to generate random user ID
-  const generateRandomUserId = () => {
-    const newId = uuidv4().substring(0, 8)
-    setUserId(newId)
-    setUserIdInput(newId)
-    localStorage.setItem('mcp_chat_user_id', newId)
-  }
-  
-  // Function to save user ID when manually changed
-  const saveUserId = () => {
-    setUserId(userIdInput)
-    localStorage.setItem('mcp_chat_user_id', userIdInput)
-  }
+  }, [user?.userId, setUserId])
 
   return (
     <div className="h-full flex flex-col">
@@ -110,35 +96,17 @@ export default function Sidebar({ onClose }: SidebarProps) {
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'chat' ? (
           <div className="space-y-6">
-            {/* User ID */}
-            <div className="space-y-2">
-              <label htmlFor="user-id" className="text-sm font-medium flex justify-between items-center">
-                User ID
-                <button
-                  onClick={generateRandomUserId}
-                  className="text-xs bg-secondary hover:bg-secondary/80 px-2 py-1 rounded-md"
-                  title="Generate random user ID"
-                >
-                  🔄 Randomize
-                </button>
-              </label>
-              <div className="flex gap-2">
-                <input
-                  id="user-id"
-                  type="text"
-                  value={userIdInput}
-                  onChange={(e) => setUserIdInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background"
-                  maxLength={32}
-                />
-                <button
-                  onClick={saveUserId}
-                  className="px-3 py-1 bg-primary text-primary-foreground rounded-md text-sm"
-                >
-                  Save
-                </button>
+            {/* User Info (read-only) */}
+            {user && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Logged in as: {user.username}
+                </label>
+                <div className="text-xs text-muted-foreground">
+                  User ID: {user.userId}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-2">
               <label htmlFor="model" className="text-sm font-medium">
@@ -192,7 +160,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
               />
             </div>
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <label htmlFor="recent-images" className="text-sm font-medium">
                 N Most Recent Images: {onlyNMostRecentImages}
               </label>
@@ -206,7 +174,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 onChange={(e) => setOnlyNMostRecentImages(parseInt(e.target.value))}
                 className="w-full"
               />
-            </div>
+            </div> */}
 
             <div className="space-y-2">
               <label htmlFor="temperature" className="text-sm font-medium">

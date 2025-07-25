@@ -47,7 +47,7 @@
 ![flow](assets/sequenceflow.png)
 
 
-## 2.安装方法（开发模式）
+## 2.安装方法
 ### 2.1. 依赖安装
 
 目前主流 MCP Server 基于 NodeJS 或者 Python 开发实现并运行于用户 PC 上，因此用户 PC 需要安装这些依赖。
@@ -62,13 +62,48 @@ NodeJS [下载安装](https://nodejs.org/en)，本项目已对 `v22.12.0` 版本
 
 首先，安装 Python 包管理工具 uv，具体可参考 [uv](https://docs.astral.sh/uv/getting-started/installation/) 官方指南
 
-### 2.3 环境配置
-下载克隆该项目后，进入项目目录创建 Python 虚拟环境并安装依赖：
+### 2.3 Docker(如有可跳过)
+- 安装Docker和Docker Compose：https://docs.docker.com/get-docker/
+- Linux下安装Docker命令：
+```bash
+# 安装Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# 安装Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+ln -s /usr/bin/docker-compose  /usr/local/bin/docker-compose
+```
+
+### 2.4 创建cognito
+下载克隆该项目后, 进入`agentcore_scripts/`目录下，运行脚本   
+```bash
+cd agentcore_scripts/
+bash run_setup.sh
+```
+运行完成后会在`agentcore_scripts/`目录下生成2个新文件:  
+
+从`identity.txt`文件中找到下面2个配置, 后面配置.env会用到:   
+```
+pool_id=us-west-xxx
+app_client_id=xxxxxx
+```
+
+从`iam-role.txt`文件中找到role arn，后面创建agentcore runtime会用到:   
+```
+Role ARN: arn:aws:iam::xxxx:role/agentcore-strands_agent_role-role
+```
+
+### 2.5 创建agentcore runtime
+
+进入项目目录创建 Python 虚拟环境并安装依赖：
 ```bash
 uv sync
 ```
 
-### 2.4 环境变量设置
+
+### 2.6 环境变量设置
 把env.example 改成.env,根据情况取消注释，修改以下变量：
 进入项目目录
 ```bash
@@ -79,63 +114,36 @@ cp env.example .env
 使用vim 打开.env文件编辑：
 ⚠️如果在x86服务器做编译，可以设置PLATFORM=linux/amd64，否则跨平台编译速度慢好几倍
 ```bash
-# for Development mode - ddb for user config
-ddb_table=mcp_user_config_table
-# for Development mode - API Key for server authentication, if you deploy with CDK, it will create a Api key automatically
+# ddb for user config
+ddb_table=agent_user_config_table
+# for Development mode - API Key for server authentication.For production, it uses cognito
 API_KEY=123456
+
+# =============================================================================
+# COGNITO AUTHENTICATION CONFIGURATION
+# AWS Cognito UserPool configuration for JWT token authentication
+# =============================================================================
+COGNITO_USER_POOL_ID=<your_cognito_userpool_id>
+COGNITO_CLIENT_ID=<your_cognito_client_id>
+
 # =============================================================================
 # AWS Infra CONFIGURATION
-# The default ECS platform is arm64, you can choose linux/amd64 
+# The default ECS platform is amd64, you can choose linux/amd64  or  linux/arm64
 # =============================================================================
-PLATFORM=linux/amd64
-AWS_REGION=your_region_to_deploy(必须填，方案部署区，例如如果是北京区用cn-north-1)
+PLATFORM=linux/arm64
+AWS_REGION=us-west-2
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 
 # =============================================================================
-# 如果在全球区，使用bedrock模型，需要如下Strands 配置
-# AWS BEDROCK CONFIGURATION (for Bedrock provider, if not set, it will use same credential as AWS Infra)
+# AGENTCORE CONFIGURATION
 # =============================================================================
-STRANDS_MODEL_PROVIDER=bedrock
-BEDROCK_AWS_ACCESS_KEY_ID=your_aws_access_key_id
-BEDROCK_AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
-BEDROCK_AWS_REGION=us-east-1
-
-# ============================
-# 如果在中国区，使用openai兼容接口的模型，需要如下Strands 配置
-# ============================
-STRANDS_MODEL_PROVIDER=openai
-OPENAI_API_KEY=your-model-provider-key
-OPENAI_BASE_URL=your-model-provider-base-url(例如https://api.siliconflow.cn/v1)
-
-# ============================
-# Langfuse 配置 (可选) 
-# ============================
-#LANGFUSE_PUBLIC_KEY=your-public-key
-#LANGFUSE_SECRET_KEY=your-secret-key
-#LANGFUSE_HOST=https://your-langfuse-host
-
-# =============================================================================
-# mem0 CONFIGURATION
-# Only used if ENABLE_MEM0=true
-# If STRANDS_MODEL_PROVIDER=bedrock, it will use models in Bedrock
-# =============================================================================
-# 使用mem0将额外增加8-10分钟的部署时间
-# 如果需要启用mem0，可以更改`ENABLE_MEM0=true`
-ENABLE_MEM0=false
-
-# 如果使用海外区
-LLM_MODEL=us.amazon.nova-pro-v1:0
-EMBEDDING_MODEL=amazon.titan-embed-text-v2:0
-
-# 如果使用国内硅基流动https://api.siliconflow.cn/v1
-LLM_MODEL=Qwen/Qwen3-14B
-EMBEDDING_MODEL=Pro/BAAI/bge-m3
+AGENTCORE_REGION=us-west-2
+MEMORY_ID=<your_agentcore_memory_id>
+AGENTCORE_RUNTIME_ARN=<your_agentcore_runtime_arn>
 ```  
-如果需要可观测性，可以去`https://us.cloud.langfuse.com/` 注册一个免费账号，然后把key和host信息填入上面的.env中，也可以参考[私有化部署](https://github.com/awslabs/amazon-bedrock-agent-samples/tree/main/examples/agent_observability/deploy-langfuse-on-ecs-fargate-with-typescript-cdk)
 
-
-- 默认配置支持`DeepSeek-R1`,`Qwen3`等模型, 如果需要支持其他模型（必须是支持tool use的模型），请自行修改[conf/config.json](conf/config.json)配置加入模型，例如：
+- 默认配置支持`Claude 3,7`,`Nova`等模型, 如果需要支持其他模型（必须是支持tool use的模型），请自行修改[conf/config.json](conf/config.json)配置加入模型，例如：
 
 ```json
   {
@@ -154,67 +162,6 @@ EMBEDDING_MODEL=Pro/BAAI/bge-m3
     "model_id": "deepseek-ai/DeepSeek-V3",
     "model_name": "DeepSeek-V3-free"
   }
-```
-
-### 2.4 创建一个dynamodb table, 名称为`mcp_user_config_table`
-```bash
-aws dynamodb create-table \
-    --table-name mcp_user_config_table \
-    --attribute-definitions AttributeName=userId,AttributeType=S \
-    --key-schema AttributeName=userId,KeyType=HASH \
-    --billing-mode PAY_PER_REQUEST 
-```
-
-
-### 2.5 启动后端服务
-
-- 启动后端服务：
-```bash
-bash start_all.sh
-```
-
-### 2.6 前端
-**前提条件**
-- 安装Docker和Docker Compose：https://docs.docker.com/get-docker/
-- Linux下安装Docker命令：
-```bash
-# 安装Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# 安装Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-ln -s /usr/bin/docker-compose  /usr/local/bin/docker-compose
-```
-1. 克隆仓库之后
-```bash
-cd demo_mcp_on_amazon_bedrock/react_ui
-```
-
-2. 创建环境变量文件
-```bash
-cp .env.example .env.local
-```
-
-3. 使用Docker Compose构建并启动服务
-```bash
-docker-compose up -d --build
-```
-
-#### 其他Docker常用命令
-```bash
-# 查看容器日志
-docker logs -f mcp-bedrock-ui
-
-# 重启容器
-docker-compose restart
-
-# 停止容器
-docker-compose down
-
-# 重新构建并启动（代码更新后）
-docker-compose up -d --build
 ```
 
 ## 3.安装方法（生产模式，AWS ECS部署）

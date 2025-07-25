@@ -11,36 +11,28 @@ import time
 import argparse
 import logging
 import asyncio
-import base64
-from botocore.config import Config
-from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Literal, AsyncGenerator, Union
 import uuid
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Security
-from utils import  (get_global_server_configs,
-                    delete_user_message,
+from utils import  (
                     save_global_server_config,
                     delete_user_server_config,
                     get_user_server_configs,
-                    session_lock,
-                    DDB_TABLE,
                     generate_id_from_string,
                     save_user_server_config)
 from agentcore_wrapper import invoke_agentcore_runtime
 from fastapi.responses import JSONResponse, StreamingResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import  HTTPAuthorizationCredentials
 from fastapi import Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from mcp_client_strands import StrandsMCPClient
-from strands_agent_client_stream import StrandsAgentClientStream
 from fastapi import APIRouter
-from utils import is_endpoint_sse,save_stream_id,get_stream_id,active_streams,delete_stream_id,delete_user_session,get_user_session,save_user_session
+from utils import is_endpoint_sse
 from data_types import *
 from health import router as health_router
-import boto3
+from auth import authenticate_user,  get_user_id_from_request,  security
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
@@ -53,16 +45,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()  # load env vars from .env
 
 llm_model_list = {}
-
-API_KEY = os.environ.get("API_KEY")
-
-security = HTTPBearer()
-
-
-async def get_api_key(auth: HTTPAuthorizationCredentials = Security(security)):
-    if auth.credentials == API_KEY:
-        return auth.credentials
-    raise HTTPException(status_code=403, detail="Could not validate credentials")
+shared_mcp_server_list = {}
 
 
 
@@ -101,10 +84,10 @@ async def list_models(
     request: Request,
     auth: HTTPAuthorizationCredentials = Security(security)
 ):
-    # 只需验证API密钥，不需要用户会话
-    await get_api_key(auth)
+    # 验证用户身份
+    auth_result = await authenticate_user(auth)
     return JSONResponse(content={"models": [{
-        "model_id": mid, 
+        "model_id": mid,
         "model_name": name} for mid, name in llm_model_list.items()]})
 
 @list_router.get("/v1/list/mcp_server")
@@ -112,12 +95,12 @@ async def list_mcp_server(
     request: Request,
     auth: HTTPAuthorizationCredentials = Security(security)
 ):
-    await get_api_key(auth)
-    # 获取用户会话
-    user_id = request.headers.get("X-User-ID", auth.credentials)
+    auth_result = await authenticate_user(auth)
+    # 获取用户ID
+    user_id = get_user_id_from_request(request, auth_result)
     server_configs = await get_user_server_configs(user_id)
     return JSONResponse(content={"servers": [{
-        "server_id": sid, 
+        "server_id": sid,
         "server_name": sid} for sid in server_configs.keys()]})
 
 # 将stop_router包含在主应用中, 注意这个顺序必须在接口定义之后
@@ -129,20 +112,23 @@ async def remove_history(
     background_tasks: BackgroundTasks,
     auth: HTTPAuthorizationCredentials = Security(security)
 ):
-    # 获取用户会话
-    await get_api_key(auth)
+    # 验证用户身份
+    auth_result = await authenticate_user(auth)
     
-    # 尝试从请求头获取用户ID，如果不存在则使用API密钥作为备用ID
-    user_id = request.headers.get("X-User-ID", auth.credentials)
+    # 获取用户ID
+    user_id = get_user_id_from_request(request, auth_result)
     
-    logger.info(f"remove history for user:{user_id}")
+    logger.info(f"remove history for user:{user_id} (auth_type: {auth_result.auth_type})")
     # 直接从ddb里删除记录即可
     # await delete_user_message(user_id)
     runtime_id = generate_id_from_string(user_id)
     
     payload = {
         "user_id":user_id,
-        "request_type":"removehistory"
+        "request_type":"removehistory",
+        "data":{
+                "stream_id":"dummy-stream-id"
+            }
     }
     
     response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload)
@@ -167,9 +153,12 @@ async def stop_stream(
     auth: HTTPAuthorizationCredentials = Security(security)
 ):
     """停止正在进行的模型输出流"""
-    # 获取用户会话
-    user_id = request.headers.get("X-User-ID", auth.credentials)
-    logger.info(f"stopping request for user:{user_id} /{stream_id}")
+    # 验证用户身份
+    auth_result = await authenticate_user(auth)
+    
+    # 获取用户ID
+    user_id = get_user_id_from_request(request, auth_result)
+    logger.info(f"stopping request for user:{user_id} /{stream_id} (auth_type: {auth_result.auth_type})")
     runtime_id = generate_id_from_string(user_id)
     
     payload = {
@@ -201,10 +190,11 @@ async def add_mcp_server(
     background_tasks: BackgroundTasks,
     auth: HTTPAuthorizationCredentials = Security(security)
 ):
-
+    # 验证用户身份
+    auth_result = await authenticate_user(auth)
     
-    # 尝试从请求头获取用户ID，如果不存在则使用API密钥作为备用ID
-    user_id = request.headers.get("X-User-ID", auth.credentials)
+    # 获取用户ID
+    user_id = get_user_id_from_request(request, auth_result)
     
     server_id = data.server_id
     server_cmd = data.command
@@ -230,7 +220,7 @@ async def add_mcp_server(
         server_script_args = config_json[server_id].get("args",[])
         server_script_envs = config_json[server_id].get('env',{})
         http_type= "sse" if is_endpoint_sse(server_url) else "streamable_http"
-        token=config_json[server_id].get('token', None)
+        token=config_json[server_id].get('token', "")
      # 保存用户服务器配置
     server_config = {
         "url":server_url,
@@ -260,12 +250,14 @@ async def remove_mcp_server(
     auth: HTTPAuthorizationCredentials = Security(security)
 ):
     """删除用户的MCP服务器"""
+    # 验证用户身份
+    auth_result = await authenticate_user(auth)
 
-    # 尝试从请求头获取用户ID，如果不存在则使用API密钥作为备用ID
-    user_id = request.headers.get("X-User-ID", auth.credentials)
+    # 获取用户ID
+    user_id = get_user_id_from_request(request, auth_result)
     # 从用户配置中删除
     await delete_user_server_config(user_id, server_id)
-    logger.info(f"User {user_id} removed MCP server {server_id}")
+    logger.info(f"User {user_id} removed MCP server {server_id} (auth_type: {auth_result.auth_type})")
     return JSONResponse(content=AddMCPServerResponse(
                 errno=0,
                 msg="Server removed successfully"
@@ -375,21 +367,22 @@ async def process_query_stream(boto3_response) -> AsyncGenerator[str, None]:
                     line = json.loads(line[6:])
                     yield line
     
-async def stream_chat_response(data: ChatCompletionRequest, user_id: str, stream_id: str = None) -> AsyncGenerator[str, None]:
+async def stream_chat_response(data: ChatCompletionRequest, 
+                               user_id: str, 
+                               stream_id: Optional[str] = None, 
+                               token :Optional[str] = None) -> AsyncGenerator[str, None]:
     """为特定用户生成流式聊天响应"""    
-    # 尝试从请求头获取用户ID，如果不存在则使用API密钥作为备用ID
     runtime_id = generate_id_from_string(user_id)
     
     payload = {
         "user_id":user_id,
         "request_type":"chatcompletion",
-        "data" :{**data.model_dump(),"stream_id":stream_id}
+        "data" :{**data.model_dump(),"stream_id":stream_id,"token":token}
     }
     
     logger.info(f"runtimesid:{runtime_id}\npayload:{payload}")
     
-        # 心跳任务控制
-    heartbeat_task = None
+    # 心跳任务控制
     heartbeat_stop_event = asyncio.Event()
     
     async def heartbeat_sender():
@@ -441,20 +434,28 @@ async def stream_chat_response(data: ChatCompletionRequest, user_id: str, stream
     
 @app.post("/v1/chat/completions")
 async def chat_completions(
-    request: Request, 
-    data: ChatCompletionRequest, 
+    request: Request,
+    data: ChatCompletionRequest,
     background_tasks: BackgroundTasks,
     auth: HTTPAuthorizationCredentials = Security(security)
 ):
-
-    user_id = request.headers.get("X-User-ID", auth.credentials)
+    # 验证用户身份
+    auth_result = await authenticate_user(auth)
+    
+    # 获取用户token
+    token = auth.credentials
+    
+    # 获取用户ID
+    user_id = get_user_id_from_request(request, auth_result)
+    
+    logger.info(f"Chat completion request for user: {user_id} (auth_type: {auth_result.auth_type})")
 
     # 处理流式请求
     if data.stream:
         # 为流式请求生成唯一ID
         stream_id = f"stream_{user_id}_{time.time_ns()}"
         return StreamingResponse(
-            stream_chat_response(data, user_id, stream_id),
+            stream_chat_response(data, user_id, stream_id, token),
             media_type="text/event-stream",
             headers={"X-Stream-ID": stream_id}  # 添加流ID到响应头，便于前端跟踪
         )
@@ -503,7 +504,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', default='127.0.0.1')
     parser.add_argument('--port', type=int, default=7002)
-    parser.add_argument('--mcp-conf', default='', help="the mcp servers json config file")
+    parser.add_argument('--mcp-conf', default='conf/config.json', help="the mcp servers json config file")
     parser.add_argument('--user-conf', default='conf/user_mcp_configs.json',
                        help="用户MCP服务器配置文件路径")
     parser.add_argument('--https', action='store_true', help="启用HTTPS")

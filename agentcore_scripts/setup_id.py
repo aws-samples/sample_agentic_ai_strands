@@ -1,8 +1,27 @@
-from utils import setup_cognito_user_pool
+import sys
+import os
+
+# Add the current directory to the Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from utils import setup_cognito_user_pool_with_signup
 
 if __name__ == '__main__':
-    print("Setting up Amazon Cognito user pool...")
-    cognito_config = setup_cognito_user_pool()
-    print("Cognito setup completed ✓")
-    print(f"User Pool ID: {cognito_config.get('user_pool_id', 'N/A')}")
-    print(f"Client ID: {cognito_config.get('client_id', 'N/A')}")
+    print("Setting up Amazon Cognito user pool with signup...")
+    cognito_config = setup_cognito_user_pool_with_signup()
+    
+    pool_id = cognito_config['pool_id']
+    app_client_id = cognito_config['app_client_id']
+    m2m_client_id = cognito_config['m2m_client_id']
+    m2m_client_secret = cognito_config['m2m_client_secret']
+    scope_string = cognito_config['scope_string']
+    discovery_url = cognito_config['discovery_url']
+    
+    with open(".env_cognito", "w") as f:
+        f.write(f"pool_id={pool_id}\n")
+        f.write(f"app_client_id={app_client_id}\n")
+        f.write(f"m2m_client_id={m2m_client_id}\n")
+        f.write(f"m2m_client_secret={m2m_client_secret}\n")
+        f.write(f"scope_string={scope_string}\n")
+        f.write(f"discovery_url={discovery_url}")
+    print("Cognito config saved to .env_cognito")
+    print(cognito_config) 

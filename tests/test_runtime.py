@@ -4,7 +4,7 @@ import json
 import os
 import sys
 sys.path.append('../')
-from agentcore_scripts.utils import get_user_token
+from agentcore_scripts.utils_bak import get_user_token
 # Enable verbose logging for requests
 import logging
 logging.basicConfig(level=logging.INFO)

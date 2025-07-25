@@ -487,10 +487,16 @@ class StrandsAgentClientStream(StrandsAgentClient):
                 # Check if we should continue waiting
                 if stream_id in self.stop_flags and self.stop_flags[stream_id]:
                     logger.info(f"Stream {stream_id} timed out and stop flag is set")
+                    # Clean up browser and code interpreter tools
+                    self.clean_builtin_tools()
+                    self.unregister_stream(stream_id)
                     yield {"type": "stopped", "data": {"message": "Stream stopped by user request"}}
                     break
                 continue
             except Exception as e:
                 logger.error(f"Error getting event from queue for stream {stream_id}: {e}")
+                # Clean up browser and code interpreter tools
+                self.clean_builtin_tools()
+                self.unregister_stream(stream_id=stream_id)
                 break
             

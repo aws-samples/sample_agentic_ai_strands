@@ -233,12 +233,7 @@ async def scan_all_from_ddb() -> dict:
 async def save_stream_id(stream_id:str,user_id:str):
     global active_streams
     with active_streams_lock:
-        if DDB_TABLE and dynamodb_client:
-            # 获取当前用户的所有配置
-            await save_to_ddb(stream_id, dict(user_id=user_id))
-            active_streams[stream_id]=user_id
-        else:
-            active_streams[stream_id]=user_id
+        active_streams[stream_id]=user_id
 
 # Get stream id
 async def get_stream_id(stream_id:str):

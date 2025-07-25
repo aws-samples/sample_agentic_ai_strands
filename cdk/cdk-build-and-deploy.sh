@@ -19,7 +19,7 @@ export NODE_ENV=production
 # 配置变量
 REGION="${AWS_REGION:-cn-northwest-1}"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-PREFIX="strands-mcp-app"
+PREFIX="strands-agentcore"
 PLATFORM="${PLATFORM:-linux/arm64}"
 # Mem0 配置 - 从环境变量读取，默认启用
 ENABLE_MEM0="${ENABLE_MEM0:-true}"
@@ -117,25 +117,45 @@ fi
 # 构建前端镜像
 echo "构建前端镜像..."
 cd ../react_ui
-cp .env.example .env.local
+# cp .env.example .env.local
 
 if [[ "$USE_BUILDX" == true ]]; then
     # 使用 buildx 跨架构构建
     if [[ $IS_CHINA_REGION == true ]]; then
         echo "使用中国镜像源构建前端镜像（buildx）..."
-        docker buildx build --platform "$PLATFORM" --build-arg USE_CHINA_MIRROR=true --build-arg PLATFORM="$PLATFORM" --load -t ${PREFIX}-frontend:latest .
+        docker buildx build --platform "$PLATFORM" \
+            --build-arg USE_CHINA_MIRROR=true \
+            --build-arg PLATFORM="$PLATFORM" \
+            --build-arg COGNITO_USER_POOL_ID="${COGNITO_USER_POOL_ID}" \
+            --build-arg COGNITO_CLIENT_ID="${COGNITO_CLIENT_ID}" \
+            --build-arg AWS_REGION="${AWS_REGION}" \
+            --load -t ${PREFIX}-frontend:latest .
     else
         echo "构建前端镜像（buildx）..."
-        docker buildx build --platform "$PLATFORM" --build-arg PLATFORM="$PLATFORM" --load -t ${PREFIX}-frontend:latest .
+        docker buildx build --platform "$PLATFORM" \
+            --build-arg PLATFORM="$PLATFORM" \
+            --build-arg COGNITO_USER_POOL_ID="${COGNITO_USER_POOL_ID}" \
+            --build-arg COGNITO_CLIENT_ID="${COGNITO_CLIENT_ID}" \
+            --build-arg AWS_REGION="${AWS_REGION}" \
+            --load -t ${PREFIX}-frontend:latest .
     fi
 else
     # 使用原生 docker build
     if [[ $IS_CHINA_REGION == true ]]; then
         echo "使用中国镜像源构建前端镜像（native）..."
-        docker build --build-arg USE_CHINA_MIRROR=true --build-arg PLATFORM="$PLATFORM" -t ${PREFIX}-frontend:latest .
+        docker build --build-arg USE_CHINA_MIRROR=true \
+            --build-arg PLATFORM="$PLATFORM" \
+            --build-arg COGNITO_USER_POOL_ID="${COGNITO_USER_POOL_ID}" \
+            --build-arg COGNITO_CLIENT_ID="${COGNITO_CLIENT_ID}" \
+            --build-arg AWS_REGION="${AWS_REGION}" \
+            -t ${PREFIX}-frontend:latest .
     else
         echo "构建前端镜像（native）..."
-        docker build --build-arg PLATFORM="$PLATFORM" -t ${PREFIX}-frontend:latest .
+        docker build --build-arg PLATFORM="$PLATFORM" \
+            --build-arg COGNITO_USER_POOL_ID="${COGNITO_USER_POOL_ID}" \
+            --build-arg COGNITO_CLIENT_ID="${COGNITO_CLIENT_ID}" \
+            --build-arg AWS_REGION="${AWS_REGION}" \
+            -t ${PREFIX}-frontend:latest .
     fi
 fi
 
@@ -152,19 +172,37 @@ if [[ "$USE_BUILDX" == true ]]; then
     # 使用 buildx 跨架构构建
     if [[ $IS_CHINA_REGION == true ]]; then
         echo "使用中国镜像源构建后端镜像（buildx）..."
-        docker buildx build --platform "$PLATFORM" --build-arg USE_CHINA_MIRROR=true --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple --build-arg PLATFORM="$PLATFORM" --load -t ${PREFIX}-backend:latest -f Dockerfile.backend .
+        docker buildx build --platform "$PLATFORM" \
+            --build-arg USE_CHINA_MIRROR=true \
+            --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
+            --build-arg PLATFORM="$PLATFORM" \
+            --build-arg AWS_REGION="${AWS_REGION}" \
+            --build-arg AWS_DEFAULT_REGION="${AWS_REGION}" \
+            --load -t ${PREFIX}-backend:latest -f Dockerfile.backend .
     else
         echo "构建后端镜像（buildx）..."
-        docker buildx build --platform "$PLATFORM" --build-arg PLATFORM="$PLATFORM" --load -t ${PREFIX}-backend:latest -f Dockerfile.backend .
+        docker buildx build --platform "$PLATFORM" \
+            --build-arg PLATFORM="$PLATFORM" \
+            --build-arg AWS_REGION="${AWS_REGION}" \
+            --build-arg AWS_DEFAULT_REGION="${AWS_REGION}" \
+            --load -t ${PREFIX}-backend:latest -f Dockerfile.backend .
     fi
 else
     # 使用原生 docker build
     if [[ $IS_CHINA_REGION == true ]]; then
         echo "使用中国镜像源构建后端镜像（native）..."
-        docker build --build-arg USE_CHINA_MIRROR=true --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple --build-arg PLATFORM="$PLATFORM" -t ${PREFIX}-backend:latest -f Dockerfile.backend .
+        docker build --build-arg USE_CHINA_MIRROR=true \
+            --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
+            --build-arg PLATFORM="$PLATFORM" \
+            --build-arg AWS_REGION="${AWS_REGION}" \
+            --build-arg AWS_DEFAULT_REGION="${AWS_REGION}" \
+            -t ${PREFIX}-backend:latest -f Dockerfile.backend .
     else
         echo "构建后端镜像（native）..."
-        docker build --build-arg PLATFORM="$PLATFORM" -t ${PREFIX}-backend:latest -f Dockerfile.backend .
+        docker build --build-arg PLATFORM="$PLATFORM" \
+            --build-arg AWS_REGION="${AWS_REGION}" \
+            --build-arg AWS_DEFAULT_REGION="${AWS_REGION}" \
+            -t ${PREFIX}-backend:latest -f Dockerfile.backend .
     fi
 fi
 
@@ -323,10 +361,10 @@ echo "Mem0 功能设置: $ENABLE_MEM0"
 export AWS_ACCOUNT_ID=$ACCOUNT_ID
 export AWS_REGION=$REGION
 export ENABLE_MEM0=$ENABLE_MEM0
-npx cdk deploy --require-approval never --region $REGION --context enableMem0=$ENABLE_MEM0
+npx cdk deploy --require-approval never --region $REGION --context enableMem0=$ENABLE_MEM0 --context namePrefix=$PREFIX
 
 # 获取输出
-STACK_NAME="McpEcsFargateStack"
+STACK_NAME="StrandsAgentsEcsFargateStack"
 
 # 等待 Stack 部署完成
 echo "等待 Stack 部署完成..."

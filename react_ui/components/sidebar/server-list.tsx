@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
-import { fetchMcpServers, removeMcpServer } from '@/lib/api/chat'
+import { useAuth } from '@/components/providers/AuthProvider'
+import { listMcpServers, removeMcpServer } from '@/lib/api/chat'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Trash2 } from 'lucide-react'
@@ -12,15 +13,18 @@ interface ServerListProps {
 }
 
 export default function ServerList({ onAddServer }: ServerListProps) {
+  const { user } = useAuth()
   const { mcpServers, setMcpServers, toggleServerEnabled, removeMcpServer: removeServerFromStore } = useStore()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleRemoveServer = async (serverId: string) => {
+    if (!user?.userId) return
+
     if (confirm('Are you sure you want to remove this server?')) {
       setIsLoading(true)
       try {
-        const result = await removeMcpServer(serverId)
+        const result = await removeMcpServer(user.userId, serverId)
         if (result.success) {
           removeServerFromStore(serverId)
         } else {
@@ -40,6 +44,8 @@ export default function ServerList({ onAddServer }: ServerListProps) {
 
   // Load servers once on mount
   useEffect(() => {
+    if (!user?.userId) return
+
     const loadServers = async () => {
       if (initialLoadDone) return
       
@@ -47,11 +53,18 @@ export default function ServerList({ onAddServer }: ServerListProps) {
       setError(null)
       try {
         // Fetch new server list from API
-        const newServerList = await fetchMcpServers()
+        const servers = await listMcpServers(user.userId)
+        
+        // Convert API response to the format expected by the store
+        const newServerList = servers.map((server: any) => ({
+          serverName: server.server_name,
+          serverId: server.server_id,
+          enabled: false
+        }))
         
         // Merge new servers with existing ones, preserving enabled state
         if (mcpServers.length > 0) {
-          const updatedServers = newServerList.map(newServer => {
+          const updatedServers = newServerList.map((newServer: any) => {
             // Check if this server already exists in our list
             const existingServer = mcpServers.find(
               existing => existing.serverId === newServer.serverId
@@ -84,7 +97,7 @@ export default function ServerList({ onAddServer }: ServerListProps) {
     }
 
     loadServers()
-  }, [setMcpServers, mcpServers.length, initialLoadDone])
+  }, [user?.userId, setMcpServers, mcpServers.length, initialLoadDone])
 
   if (isLoading) {
     return <div className="text-sm text-muted-foreground py-2">Loading servers...</div>

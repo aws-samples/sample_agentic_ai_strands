@@ -4,47 +4,46 @@ import { useState, useEffect, useRef } from 'react';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useStore } from '@/lib/store';
-import { v4 as uuidv4 } from 'uuid';
-import { fetchMcpServers } from '@/lib/api/chat';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { listMcpServers } from '@/lib/api/chat';
 
 export default function ChatInterface() {
   const [isLoadingMcpServers, setIsLoadingMcpServers] = useState(true);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const loadedRef = useRef<boolean>(false);
   
-  const { userId, setUserId, mcpServers, setMcpServers } = useStore();
+  const { user } = useAuth();
+  const { setUserId, mcpServers, setMcpServers } = useStore();
   
-  // Initialize userId if not set
+  // Set userId from authenticated user
   useEffect(() => {
-    if (!userId) {
-      // Check if user ID exists in localStorage
-      const storedUserId = localStorage.getItem('mcp_chat_user_id');
-      if (storedUserId) {
-        setUserId(storedUserId);
-      } else {
-        // Generate new random user ID
-        const newUserId = uuidv4().substring(0, 8);
-        setUserId(newUserId);
-        localStorage.setItem('mcp_chat_user_id', newUserId);
-      }
+    if (user?.userId) {
+      setUserId(user.userId);
     }
-  }, [userId, setUserId]);
+  }, [user?.userId, setUserId]);
   
   // Fetch MCP servers when component mounts - only run once
   useEffect(() => {
-    // Only load servers once
-    if (loadedRef.current) return;
+    // Only load servers once and ensure user is authenticated
+    if (loadedRef.current || !user?.userId) return;
     
     const loadMcpServers = async () => {
       setIsLoadingMcpServers(true);
       try {
-        const servers = await fetchMcpServers();
+        const servers = await listMcpServers(user.userId);
+        
+        // Convert API response to the format expected by the store
+        const mappedServers = servers.map((server: any) => ({
+          serverName: server.server_name,
+          serverId: server.server_id,
+          enabled: false
+        }));
         
         // Process servers
         let updatedServers;
         if (mcpServers.length > 0) {
           // Preserve enabled state from existing servers
-          updatedServers = servers.map(newServer => {
+          updatedServers = mappedServers.map((newServer: any) => {
             const existingServer = mcpServers.find(
               existing => existing.serverId === newServer.serverId
             );
@@ -59,7 +58,7 @@ export default function ChatInterface() {
             return newServer;
           });
         } else {
-          updatedServers = servers;
+          updatedServers = mappedServers;
         }
         
         // Update the store
@@ -75,7 +74,7 @@ export default function ChatInterface() {
     };
     
     loadMcpServers();
-  }, []); // Empty dependency array to run only once
+  }, [user?.userId]); // Depend on user.userId
   
   return (
     <div className="flex flex-col h-full">

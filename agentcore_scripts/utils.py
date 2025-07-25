@@ -5,6 +5,142 @@ from boto3.session import Session
 from bedrock_agentcore.memory import MemoryClient
 from bedrock_agentcore.memory.constants import StrategyType
 from botocore.exceptions import ClientError
+import requests
+
+
+def create_agentcore_gateway_role(gateway_name):
+    iam_client = boto3.client('iam')
+    agentcore_gateway_role_name = f'agentcore-{gateway_name}-role'
+    boto_session = Session()
+    region = boto_session.region_name
+    account_id = boto3.client("sts").get_caller_identity()["Account"]
+    role_policy = {
+        "Version": "2012-10-17",
+        "Statement": [{
+                "Sid": "VisualEditor0",
+                "Effect": "Allow",
+                "Action": [
+                    "bedrock-agentcore:*",
+                    "bedrock:*",
+                    "agent-credential-provider:*",
+                    "iam:PassRole",
+                    "secretsmanager:GetSecretValue",
+                    "lambda:InvokeFunction"
+                ],
+                "Resource": "*"
+            }
+        ]
+    }
+
+    assume_role_policy_document = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AssumeRolePolicy",
+                "Effect": "Allow",
+                "Principal": {
+                    "Service": "bedrock-agentcore.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole",
+                "Condition": {
+                    "StringEquals": {
+                        "aws:SourceAccount": f"{account_id}"
+                    },
+                    "ArnLike": {
+                        "aws:SourceArn": f"arn:aws:bedrock-agentcore:{region}:{account_id}:*"
+                    }
+                }
+            }
+        ]
+    }
+
+    assume_role_policy_document_json = json.dumps(
+        assume_role_policy_document
+    )
+
+    role_policy_document = json.dumps(role_policy)
+    # Create IAM Role for the Lambda function
+    try:
+        agentcore_iam_role = iam_client.create_role(
+            RoleName=agentcore_gateway_role_name,
+            AssumeRolePolicyDocument=assume_role_policy_document_json
+        )
+
+        # Pause to make sure role is created
+        time.sleep(10)
+    except iam_client.exceptions.EntityAlreadyExistsException:
+        print("Role already exists -- deleting and creating it again")
+        policies = iam_client.list_role_policies(
+            RoleName=agentcore_gateway_role_name,
+            MaxItems=100
+        )
+        print("policies:", policies)
+        for policy_name in policies['PolicyNames']:
+            iam_client.delete_role_policy(
+                RoleName=agentcore_gateway_role_name,
+                PolicyName=policy_name
+            )
+        print(f"deleting {agentcore_gateway_role_name}")
+        iam_client.delete_role(
+            RoleName=agentcore_gateway_role_name
+        )
+        print(f"recreating {agentcore_gateway_role_name}")
+        agentcore_iam_role = iam_client.create_role(
+            RoleName=agentcore_gateway_role_name,
+            AssumeRolePolicyDocument=assume_role_policy_document_json
+        )
+
+    # Attach the AWSLambdaBasicExecutionRole policy
+    print(f"attaching role policy {agentcore_gateway_role_name}")
+    try:
+        iam_client.put_role_policy(
+            PolicyDocument=role_policy_document,
+            PolicyName="AgentCorePolicy",
+            RoleName=agentcore_gateway_role_name
+        )
+    except Exception as e:
+        print(e)
+
+    return agentcore_iam_role
+
+
+def delete_gateway(gateway_client,gatewayId): 
+    print("Deleting all targets for gateway", gatewayId)
+    list_response = gateway_client.list_gateway_targets(
+            gatewayIdentifier = gatewayId,
+            maxResults=100
+    )
+    for item in list_response['items']:
+        targetId = item["targetId"]
+        print("Deleting target ", targetId)
+        gateway_client.delete_gateway_target(
+            gatewayIdentifier = gatewayId,
+            targetId = targetId
+        )
+    print("Deleting gateway ", gatewayId)
+    gateway_client.delete_gateway(gatewayIdentifier = gatewayId)
+
+
+def get_token(user_pool_id: str, client_id: str, client_secret: str, scope_string: str, REGION: str) -> dict:
+    try:
+        user_pool_id_without_underscore = user_pool_id.replace("_", "")
+        url = f"https://{user_pool_id_without_underscore}.auth.{REGION}.amazoncognito.com/oauth2/token"
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        data = {
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "scope": scope_string,
+
+        }
+        print(client_id)
+        print(client_secret)
+        response = requests.post(url, headers=headers, data=data)
+        response.raise_for_status()
+        return response.json()
+
+    except requests.exceptions.RequestException as err:
+        return {"error": str(err)}
 
 
 def setup_memclient():
@@ -94,11 +230,23 @@ def setup_cognito_user_pool():
     try:
         # Create User Pool
         user_pool_response = cognito_client.create_user_pool(
-            PoolName='MCPServerPool',
+            PoolName='StrandDemoPool',
             Policies={
                 'PasswordPolicy': {
                     'MinimumLength': 8
                 }
+            },
+            # Configure email verification
+            AliasAttributes=['email'],
+            AutoVerifiedAttributes=['email'],
+            VerificationMessageTemplate={
+                'DefaultEmailOption': 'CONFIRM_WITH_CODE',
+                'EmailMessage': 'Your verification code is {####}',
+                'EmailSubject': 'Your verification code'
+            },
+            # Configure email settings
+            EmailConfiguration={
+                'EmailSendingAccount': 'COGNITO_DEFAULT'
             }
         )
         pool_id = user_pool_response['UserPool']['Id']
@@ -106,12 +254,22 @@ def setup_cognito_user_pool():
         # Create App Client
         app_client_response = cognito_client.create_user_pool_client(
             UserPoolId=pool_id,
-            ClientName='MCPServerPoolClient',
+            ClientName='StrandDemoPoolClient',
             GenerateSecret=False,
             ExplicitAuthFlows=[
                 'ALLOW_USER_PASSWORD_AUTH',
+                'ALLOW_USER_SRP_AUTH',
                 'ALLOW_REFRESH_TOKEN_AUTH'
-            ]
+            ],
+            # Set token expiration values
+            AccessTokenValidity=24,      # 24 hours (maximum)
+            IdTokenValidity=24,          # 24 hours (maximum)
+            RefreshTokenValidity=30,     # 30 days
+            TokenValidityUnits={
+                'AccessToken': 'hours',
+                'IdToken': 'hours',
+                'RefreshToken': 'days'
+            }
         )
         client_id = app_client_response['UserPoolClient']['ClientId']
         
@@ -158,6 +316,348 @@ def setup_cognito_user_pool():
         
     except Exception as e:
         print(f"Error: {e}")
+        return None
+
+
+def setup_cognito_user_pool_with_signup(pool_name = "StrandDemoPoolWithSignup" ):
+    """
+    创建支持用户注册的 Cognito UserPool，如果pool已经存在，则更新设置
+    """
+    boto_session = Session()
+    region = boto_session.region_name
+    
+    # Initialize Cognito client
+    cognito_client = boto3.client('cognito-idp', region_name=region)
+    
+    pool_id = None
+    client_id = None
+    m2m_client_id = None
+    m2m_client_secret = None
+    
+    try:
+        # Try to create User Pool with email verification
+        try:
+            user_pool_response = cognito_client.create_user_pool(
+                PoolName=pool_name,
+                Policies={
+                    'PasswordPolicy': {
+                        'MinimumLength': 8,
+                        'RequireUppercase': True,
+                        'RequireLowercase': True,
+                        'RequireNumbers': True,
+                        'RequireSymbols': False
+                    }
+                },
+                # Configure email verification
+                AliasAttributes=['email'],
+                AutoVerifiedAttributes=['email'],
+                VerificationMessageTemplate={
+                    'DefaultEmailOption': 'CONFIRM_WITH_CODE',
+                    'EmailMessage': 'Your verification code is {####}',
+                    'EmailSubject': 'Your verification code for Strands Agent'
+                },
+                # Configure email settings
+                EmailConfiguration={
+                    'EmailSendingAccount': 'COGNITO_DEFAULT'
+                },
+                # Configure sign-up settings
+                AdminCreateUserConfig={
+                    'AllowAdminCreateUserOnly': False,
+                    'InviteMessageTemplate': {
+                        'EmailMessage': 'Welcome to Strands Agent! Your username is {username} and temporary password is {####}',
+                        'EmailSubject': 'Welcome to Strands Agent'
+                    }
+                }
+            )
+            pool_id = user_pool_response['UserPool']['Id']
+            print(f"✅ Created new user pool: {pool_id}")
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'LimitExceededException' or 'already exists' in str(e).lower():
+                # Pool already exists, find it by name
+                print(f"User pool with name '{pool_name}' already exists, finding existing pool...")
+                paginator = cognito_client.get_paginator('list_user_pools')
+                for page in paginator.paginate(MaxResults=60):
+                    for pool in page['UserPools']:
+                        if pool['Name'] == pool_name:
+                            pool_id = pool['Id']
+                            print(f"✅ Found existing user pool: {pool_id}")
+                            break
+                    if pool_id:
+                        break
+                
+                if not pool_id:
+                    print(f"❌ Could not find existing user pool with name '{pool_name}'")
+                    return None
+                    
+                # Update the existing user pool
+                try:
+                    cognito_client.update_user_pool(
+                        UserPoolId=pool_id,
+                        Policies={
+                            'PasswordPolicy': {
+                                'MinimumLength': 8,
+                                'RequireUppercase': True,
+                                'RequireLowercase': True,
+                                'RequireNumbers': True,
+                                'RequireSymbols': False
+                            }
+                        },
+                        # Configure email verification
+                        AliasAttributes=['email'],
+                        AutoVerifiedAttributes=['email'],
+                        VerificationMessageTemplate={
+                            'DefaultEmailOption': 'CONFIRM_WITH_CODE',
+                            'EmailMessage': 'Your verification code is {####}',
+                            'EmailSubject': 'Your verification code for Strands Agent'
+                        },
+                        # Configure email settings
+                        EmailConfiguration={
+                            'EmailSendingAccount': 'COGNITO_DEFAULT'
+                        },
+                        # Configure sign-up settings
+                        AdminCreateUserConfig={
+                            'AllowAdminCreateUserOnly': False,
+                            'InviteMessageTemplate': {
+                                'EmailMessage': 'Welcome to Strands Agent! Your username is {username} and temporary password is {####}',
+                                'EmailSubject': 'Welcome to Strands Agent'
+                            }
+                        }
+                    )
+                    print(f"✅ Updated existing user pool: {pool_id}")
+                except Exception as update_error:
+                    print(f"⚠️ Failed to update user pool (continuing with existing settings): {update_error}")
+            else:
+                raise e
+
+        # Try to create App Client or find existing one
+        try:
+            app_client_response = cognito_client.create_user_pool_client(
+                UserPoolId=pool_id,
+                ClientName='StrandDemoPoolSignupClient',
+                GenerateSecret=False,
+                ExplicitAuthFlows=[
+                    'ALLOW_USER_PASSWORD_AUTH',
+                    'ALLOW_USER_SRP_AUTH',
+                    'ALLOW_REFRESH_TOKEN_AUTH'
+                ],
+                # Set token expiration values
+                AccessTokenValidity=24,      # 24 hours (maximum)
+                IdTokenValidity=24,          # 24 hours (maximum)
+                RefreshTokenValidity=30,     # 30 days
+                TokenValidityUnits={
+                    'AccessToken': 'hours',
+                    'IdToken': 'hours',
+                    'RefreshToken': 'days'
+                }
+            )
+            client_id = app_client_response['UserPoolClient']['ClientId']
+            print(f"✅ Created new app client: {client_id}")
+            
+        except ClientError as e:
+            if 'already exists' in str(e).lower() or e.response['Error']['Code'] == 'LimitExceededException':
+                # Find existing app client
+                print("App client already exists, finding existing client...")
+                paginator = cognito_client.get_paginator('list_user_pool_clients')
+                for page in paginator.paginate(UserPoolId=pool_id, MaxResults=60):
+                    for client in page['UserPoolClients']:
+                        if client['ClientName'] == 'StrandDemoPoolSignupClient':
+                            client_id = client['ClientId']
+                            print(f"✅ Found existing app client: {client_id}")
+                            break
+                    if client_id:
+                        break
+                        
+                if not client_id:
+                    print("❌ Could not find existing app client")
+                    return None
+                    
+                # Update the existing app client
+                try:
+                    cognito_client.update_user_pool_client(
+                        UserPoolId=pool_id,
+                        ClientId=client_id,
+                        ClientName='StrandDemoPoolSignupClient',
+                        GenerateSecret=False,
+                        ExplicitAuthFlows=[
+                            'ALLOW_USER_PASSWORD_AUTH',
+                            'ALLOW_USER_SRP_AUTH',
+                            'ALLOW_REFRESH_TOKEN_AUTH'
+                        ],
+                        AccessTokenValidity=24,
+                        IdTokenValidity=24,
+                        RefreshTokenValidity=30,
+                        TokenValidityUnits={
+                            'AccessToken': 'hours',
+                            'IdToken': 'hours',
+                            'RefreshToken': 'days'
+                        }
+                    )
+                    print(f"✅ Updated existing app client: {client_id}")
+                except Exception as update_error:
+                    print(f"⚠️ Failed to update app client (continuing with existing settings): {update_error}")
+            else:
+                raise e
+        
+        # Create User (for testing)
+        try:
+            cognito_client.admin_create_user(
+                UserPoolId=pool_id,
+                Username='testuser',
+                TemporaryPassword='Temp123!',
+                MessageAction='SUPPRESS'
+            )
+            
+            # Set Permanent Password
+            cognito_client.admin_set_user_password(
+                UserPoolId=pool_id,
+                Username='testuser',
+                Password='MyPassword123!',
+                Permanent=True
+            )
+            
+            print("✅ Test user created successfully")
+        except Exception as user_error:
+            print(f"⚠️ Test user creation failed (this is optional): {user_error}")
+        
+
+        # Try to create domain or use existing one
+        user_pool_id_without_underscore_lc = pool_id.replace("_", "").lower()
+        try:
+            response = cognito_client.create_user_pool_domain(
+                Domain=user_pool_id_without_underscore_lc,
+                UserPoolId=pool_id
+            )
+            print(f"✅ Created new domain: {user_pool_id_without_underscore_lc}")
+        except ClientError as e:
+            if 'already exists' in str(e).lower() or e.response['Error']['Code'] == 'InvalidParameterException':
+                print(f"✅ Domain already exists: {user_pool_id_without_underscore_lc}")
+            else:
+                raise e
+        
+
+        # Try to create resource server or use existing one
+        RESOURCE_SERVER_ID = "strands-demo-resource-server-id"
+        RESOURCE_SERVER_NAME = "strands-demo-resource-server-name"
+        SCOPES = [
+            {"ScopeName": "gateway:read", "ScopeDescription": "Read access"},
+            {"ScopeName": "gateway:write", "ScopeDescription": "Write access"}
+        ]
+        
+        try:
+            print('Creating new resource server...')
+            cognito_client.create_resource_server(
+                UserPoolId=pool_id,
+                Identifier=RESOURCE_SERVER_ID,
+                Name=RESOURCE_SERVER_NAME,
+                Scopes=SCOPES
+            )
+            print(f"✅ Created new resource server: {RESOURCE_SERVER_ID}")
+        except ClientError as e:
+            if 'already exists' in str(e).lower() or e.response['Error']['Code'] == 'InvalidParameterException':
+                print(f"✅ Resource server already exists: {RESOURCE_SERVER_ID}")
+                # Update existing resource server
+                try:
+                    cognito_client.update_resource_server(
+                        UserPoolId=pool_id,
+                        Identifier=RESOURCE_SERVER_ID,
+                        Name=RESOURCE_SERVER_NAME,
+                        Scopes=SCOPES
+                    )
+                    print(f"✅ Updated existing resource server: {RESOURCE_SERVER_ID}")
+                except Exception as update_error:
+                    print(f"⚠️ Failed to update resource server (continuing with existing settings): {update_error}")
+            else:
+                raise e
+
+        # Try to create M2M client or find existing one
+        M2M_CLIENT_NAME = "strands-demo-m2m-client"
+        try:
+            print('Creating new M2M client...')
+            created = cognito_client.create_user_pool_client(
+                UserPoolId=pool_id,
+                ClientName=M2M_CLIENT_NAME,
+                GenerateSecret=True,
+                AllowedOAuthFlows=["client_credentials"],
+                AllowedOAuthScopes=[f"{RESOURCE_SERVER_ID}/gateway:read", f"{RESOURCE_SERVER_ID}/gateway:write"],
+                AllowedOAuthFlowsUserPoolClient=True,
+                SupportedIdentityProviders=["COGNITO"],
+                ExplicitAuthFlows=["ALLOW_REFRESH_TOKEN_AUTH"]
+            )
+            m2m_client_id, m2m_client_secret = created["UserPoolClient"]["ClientId"], created["UserPoolClient"]["ClientSecret"]
+            print(f"✅ Created new M2M client: {m2m_client_id}")
+            
+        except ClientError as e:
+            if 'already exists' in str(e).lower() or e.response['Error']['Code'] == 'LimitExceededException':
+                # Find existing M2M client
+                print("M2M client already exists, finding existing client...")
+                paginator = cognito_client.get_paginator('list_user_pool_clients')
+                for page in paginator.paginate(UserPoolId=pool_id, MaxResults=60):
+                    for client in page['UserPoolClients']:
+                        if client['ClientName'] == M2M_CLIENT_NAME:
+                            m2m_client_id = client['ClientId']
+                            print(f"✅ Found existing M2M client: {m2m_client_id}")
+                            break
+                    if m2m_client_id:
+                        break
+                        
+                if not m2m_client_id:
+                    print("❌ Could not find existing M2M client")
+                    return None
+                
+                # Get the client secret (note: we can't retrieve the secret for existing clients)
+                print("⚠️ Using existing M2M client - secret cannot be retrieved")
+                m2m_client_secret = "***EXISTING_CLIENT_SECRET***"
+                
+                # Update the existing M2M client
+                try:
+                    cognito_client.update_user_pool_client(
+                        UserPoolId=pool_id,
+                        ClientId=m2m_client_id,
+                        ClientName=M2M_CLIENT_NAME,
+                        AllowedOAuthFlows=["client_credentials"],
+                        AllowedOAuthScopes=[f"{RESOURCE_SERVER_ID}/gateway:read", f"{RESOURCE_SERVER_ID}/gateway:write"],
+                        AllowedOAuthFlowsUserPoolClient=True,
+                        SupportedIdentityProviders=["COGNITO"],
+                        ExplicitAuthFlows=["ALLOW_REFRESH_TOKEN_AUTH"]
+                    )
+                    print(f"✅ Updated existing M2M client: {m2m_client_id}")
+                except Exception as update_error:
+                    print(f"⚠️ Failed to update M2M client (continuing with existing settings): {update_error}")
+            else:
+                raise e
+        
+        # get domain
+        response = cognito_client.describe_user_pool(UserPoolId=pool_id)
+        domain = response['UserPool'].get('Domain')
+        
+        scopeString = f"{RESOURCE_SERVER_ID}/gateway:read {RESOURCE_SERVER_ID}/gateway:write"
+
+        # Output the required values
+        print(f"Pool id: {pool_id}")
+        print(f"Discovery URL: https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/openid-configuration")
+        print(f"APP Client ID: {client_id}")
+        print(f"Domain: {domain}.auth.us-east-1.amazoncognito.com")
+        print(f"Resource server ID: {RESOURCE_SERVER_ID}")
+        print(f"M2M Client ID: {m2m_client_id}")
+        print(f"M2M Client Secret: {m2m_client_secret}")
+        print(f"Scope String: {scopeString}")
+        print("✅ UserPool with signup support setup completed successfully!")
+        
+        # Return values if needed for further processing
+        return {
+            'pool_id': pool_id,
+            'app_client_id': client_id,
+            'm2m_client_id': m2m_client_id,
+            'm2m_client_secret': m2m_client_secret,
+            'scope_string': scopeString,
+            'discovery_url': f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/openid-configuration"
+        }
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 

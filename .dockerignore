@@ -52,7 +52,6 @@ htmlcov/
 .gitattributes
 
 # Documentation
-docs/
 *.md
 !README.md
 

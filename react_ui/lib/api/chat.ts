@@ -29,24 +29,7 @@ if (typeof window === 'undefined') {
 
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
 
-// Get user ID from local storage with fallback
-const getUserId = () => {
-  let userId = localStorage.getItem('mcp_chat_user_id') || 'anonymous';
-  
-  // Check if the stored ID is a JSON object with mcp_chat_user_id key
-  if (userId && userId.includes('{')) {
-    try {
-      const parsedId = JSON.parse(userId);
-      if (parsedId && typeof parsedId === 'object' && parsedId.mcp_chat_user_id) {
-        userId = parsedId.mcp_chat_user_id;
-      }
-    } catch (e) {
-      // If parsing fails, use the original ID as is
-    }
-  }
-  
-  return userId;
-}
+// Note: getUserId function removed - user ID should be passed from authentication context
 
 /**
  * Get authentication headers with user ID
@@ -108,10 +91,10 @@ export async function listMcpServers(userId: string) {
 /**
  * Remove an MCP server
  */
-export async function removeMcpServer(serverId: string): Promise<{ success: boolean; message: string }> {
+export async function removeMcpServer(userId: string, serverId: string): Promise<{ success: boolean; message: string }> {
   try {
     const baseUrl = getBaseUrl();
-    const headers = await getAuthHeaders(getUserId());
+    const headers = await getAuthHeaders(userId);
     const response = await fetch(`${baseUrl}/remove/mcp_server/${serverId}`, {
       method: 'DELETE',
       headers
@@ -455,27 +438,8 @@ export async function stopStream(userId: string, streamId: string) {
   }
 }
 
-// Compatibility wrapper functions for the old API interface
-export async function fetchModels(): Promise<any[]> {
-  return listModels(getUserId());
-}
-
-export async function fetchMcpServers(): Promise<any[]> {
-  const servers = await listMcpServers(getUserId());
-  return servers.map((server: any) => ({
-    serverName: server.server_name,
-    serverId: server.server_id,
-    enabled: false
-  }));
-}
-
-// Generate a random user ID
-export function generateRandomUserId(): string {
-  const newId = Math.random().toString(36).substring(2, 10);
-  // Ensure we always store a plain string, not a JSON object
-  localStorage.setItem('mcp_chat_user_id', newId);
-  return newId;
-}
+// Deprecated wrapper functions - these should not be used anymore
+// Use listModels(userId) and listMcpServers(userId) directly instead
 
 /**
  * Send chat request to API

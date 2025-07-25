@@ -4,7 +4,7 @@ set -e
 
 # 配置变量
 REGION="${AWS_REGION:-us-east-2}"
-PREFIX="strands-mcp-app"
+PREFIX="strands-agentcore"
 
 # 检测是否为中国区域
 if [[ $REGION == cn-* ]]; then

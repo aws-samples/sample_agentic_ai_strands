@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
+import { useAuth } from '@/components/providers/AuthProvider'
 import * as Select from "@radix-ui/react-select"
 import { Check, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { fetchModels } from '@/lib/api/chat'
+import { listModels } from '@/lib/api/chat'
 
 interface ModelData {
   model_name?: string;
@@ -16,15 +17,23 @@ interface ModelData {
 }
 
 export default function ModelSelector() {
+  const { user } = useAuth()
   const { models, selectedModel, setModels, setSelectedModel } = useStore()
   const [isLoading, setIsLoading] = useState(true)
   
-  // Fetch models when component mounts
+  // Fetch models when component mounts and user is authenticated
   useEffect(() => {
+    if (!user?.userId) {
+      setIsLoading(false)
+      return
+    }
+
     async function loadModels() {
+      if (!user?.userId) return
+      
       setIsLoading(true)
       try {
-        const modelList = await fetchModels()
+        const modelList = await listModels(user.userId)
         if (modelList && modelList.length > 0) {
           // Convert API response to the format expected by the store
           const mappedModels = modelList.map((model: ModelData) => {
@@ -33,7 +42,7 @@ export default function ModelSelector() {
               modelName: model.model_name || model.modelName || '',
               modelId: model.model_id || model.modelId || ''
             };
-          }).filter(model => model.modelName && model.modelId);
+          }).filter((model: any) => model.modelName && model.modelId);
           
           setModels(mappedModels)
           
@@ -50,7 +59,7 @@ export default function ModelSelector() {
     }
     
     loadModels()
-  }, [setModels, setSelectedModel, selectedModel])
+  }, [user?.userId, setModels, setSelectedModel, selectedModel])
 
   // Handle model selection change
   const handleValueChange = (value: string) => {

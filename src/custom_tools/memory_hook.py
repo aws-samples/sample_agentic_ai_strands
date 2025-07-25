@@ -43,7 +43,7 @@ class AgentMemoryHooks(HookProvider):
                 session_id=self.session_id,
                 k=self.recent_turns
             )
-            logger.info(f"✅ Loaded {len(recent_turns)} conversation turns:\{recent_turns}")
+            logger.info(f"✅ Loaded {len(recent_turns)} conversation turns:{recent_turns}")
 
             if recent_turns:
                 # Format conversation history for context
@@ -61,7 +61,7 @@ class AgentMemoryHooks(HookProvider):
                             
                 
                 event.agent.messages = context_messages
-                logger.info(f"✅ Initialized {len(context_messages)} conversation turns:\{context_messages}")
+                logger.info(f"✅ Initialized {len(context_messages)} conversation turns:{context_messages}")
                 # Add context to agent's system prompt.
                 # event.agent.system_prompt += f"\n\nRecent conversation:\n{context}"
                 
@@ -84,16 +84,45 @@ class AgentMemoryHooks(HookProvider):
             except Exception as e:
                 logger.error(f"Memory save error: {e}")
     
-    def register_hooks(self, registry: HookRegistry):
-        # Register memory hooks
-        registry.add_callback(MessageAddedEvent, self.on_message_added)
-        registry.add_callback(AgentInitializedEvent, self.on_agent_initialized)
+    
+    def save_conversations(self, event: AfterInvocationEvent):
+        """Save all after agent response"""
+        try:
+            messages = event.agent.messages
+            if len(messages) >= 2 and messages[-1]["role"] == "assistant":
+                # Get last customer query and agent response
+                customer_query = None
+                agent_response = None
+                
+                for msg in reversed(messages):
+                    if msg["role"] == "assistant" and not agent_response:
+                        # only add text messages
+                        if "text" in msg["content"][0]:
+                            agent_response = msg["content"][0]["text"]
+                    elif msg["role"] == "user" and not customer_query and "toolResult" not in msg["content"][0]:
+                        if "text" in msg["content"][0]:
+                            customer_query = msg["content"][0]["text"]
+                        break
+                
+                if customer_query and agent_response:
+                    # Save the support interaction
+                    self.memory_client.create_event(
+                        memory_id=self.memory_id,
+                        actor_id=self.actor_id,
+                        session_id=self.session_id,
+                        messages=[(customer_query, "USER"), (agent_response, "ASSISTANT")]
+                    )
+                    logger.info("Saved interaction to memory")
+                    
+        except Exception as e:
+            logger.error(f"Failed to save interaction: {e}")
     
     def register_hooks(self, registry: HookRegistry) -> None:
         """Register agent memory hooks"""
         # registry.add_callback(MessageAddedEvent, self.retrieve_user_context)
-        # registry.add_callback(AfterInvocationEvent, self.save_user_interaction)
+        # 
         # Register memory hooks
-        registry.add_callback(MessageAddedEvent, self.on_message_added)
+        registry.add_callback(AfterInvocationEvent, self.save_conversations)
+        # registry.add_callback(MessageAddedEvent, self.on_message_added)
         registry.add_callback(AgentInitializedEvent, self.on_agent_initialized)
         logger.info("agent memory hooks registered")

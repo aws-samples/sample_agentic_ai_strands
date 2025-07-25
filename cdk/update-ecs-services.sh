@@ -5,7 +5,7 @@ set -e
 # 配置变量
 REGION="${AWS_REGION:-us-east-2}"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-PREFIX="strands-mcp-app"
+PREFIX="strands-agentcore"
 
 # 检测是否为中国区域
 if [[ $REGION == cn-* ]]; then
@@ -116,7 +116,7 @@ echo "========================================="
 
 # 获取 ALB DNS 名称
 ALB_DNS=$(aws cloudformation describe-stacks \
-    --stack-name McpEcsFargateStack \
+    --stack-name StrandsAgentsEcsFargateStack \
     --region $REGION \
     --query 'Stacks[0].Outputs[?OutputKey==`AlbDnsName`].OutputValue' \
     --output text 2>/dev/null || echo "无法获取ALB DNS")
