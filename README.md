@@ -101,7 +101,7 @@ Role ARN: arn:aws:iam::xxxx:role/agentcore-strands_agent_role-role
 ```bash
 uv sync
 ```
-
+- to be added.  
 
 ### 2.6 环境变量设置
 把env.example 改成.env,根据情况取消注释，修改以下变量：
