@@ -16,7 +16,6 @@ from fastapi import FastAPI
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Literal, AsyncGenerator, Union
 import uuid
-import threading
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from utils import  (get_global_server_configs,
@@ -27,7 +26,7 @@ from mcp_client_strands import StrandsMCPClient
 from contextlib import asynccontextmanager
 from opentelemetry import baggage, context
 from strands_agent_client_stream import StrandsAgentClientStream
-from utils import is_endpoint_sse,save_stream_id,get_stream_id,active_streams,delete_stream_id
+from utils import is_endpoint_sse,save_stream_id,get_stream_id,active_streams,delete_stream_id,get_cognito_token
 from data_types import *
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 
@@ -54,6 +53,12 @@ user_sessions = {}
 
 MAX_TURNS = int(os.environ.get("MAX_TURNS",200))
 INACTIVE_TIME = int(os.environ.get("INACTIVE_TIME",5))  #mins
+
+COGNITO_USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID","")
+COGNITO_CLIENT_ID=os.environ.get("COGNITO_CLIENT_ID","")
+COGNITO_M2M_CLIENT_ID=os.environ.get("COGNITO_M2M_CLIENT_ID","")
+COGNITO_M2M_CLIENT_SECRET=os.environ.get("COGNITO_M2M_CLIENT_SECRET","")
+COGNITO_M2M_CLIENT_SCOPE=os.environ.get("COGNITO_M2M_CLIENT_SCOPE","")
 
 def set_session_context(session_id):
     """Set the session ID in OpenTelemetry baggage for trace correlation"""
@@ -105,6 +110,9 @@ async def initialize_user_servers(session: UserSession,mcp_server_ids = [],user_
     server_configs = {**server_configs, **global_server_configs}
     
     # logger.info(f"server_configs:{server_configs}")
+    
+    # 初始化agentcore gateway m2m token
+    m2m_token = ""
     # 初始化服务器连接
     for server_id, config in server_configs.items():
         # 如果不在用户的请求request中，则跳过
@@ -121,7 +129,27 @@ async def initialize_user_servers(session: UserSession,mcp_server_ids = [],user_
             else:
                 raise ValueError("only support client_type strands")
             server_url = config.get('url',"")
-            token = user_token if config.get('token') == "" else config.get('token')
+            # token = user_token if config.get('token') == "" else config.get('token')
+            token = config.get('token','') 
+
+            # it is from agentcore
+            if 'bedrock-agentcore' in server_url :
+                # if it is agentcore mcp runtime use user_token pass in from client
+                if "/invocations?qualifier" in server_url and not token:
+                    token = user_token
+                    logger.info(f"Get mcp token:{token}")
+                # if it is gateway 
+                elif 'gateway.bedrock-agentcore' in server_url and not token and not m2m_token:
+                    m2m_token = get_cognito_token(user_pool_id=COGNITO_USER_POOL_ID,
+                                  client_id=COGNITO_M2M_CLIENT_ID,
+                                  client_secret=COGNITO_M2M_CLIENT_SECRET,
+                                  scope_string=COGNITO_M2M_CLIENT_SCOPE)
+                    token = m2m_token["access_token"]
+                    # logger.info("Get agentcore gateway token:{token}")
+
+                else:
+                    raise ValueError('Cannot recognize the url type in bedrock agentcore')                
+                
             await mcp_client.connect_to_server(
                 server_id=server_id,
                 command=config.get('command'),
@@ -160,7 +188,7 @@ async def get_or_create_user_session(
         session =  user_sessions[user_id]
     # 从ddb中取出配置，重新初始化，如果已经存在则跳过。
     if init_mcp:
-        await initialize_user_servers(session,mcp_server_ids,user_token=user_token)
+        await initialize_user_servers(session,mcp_server_ids,user_token)
     return session
 
 
@@ -479,7 +507,6 @@ async def stream_chat_response(data: ChatCompletionRequest, session: UserSession
     except Exception as e:
         logger.error(f"Stream error for user {session.user_id}: {e}",exc_info=True)
         error_message = f"Stream processing error: {type(e).__name__} - {str(e)}"
-
         error_data = {
             "id": f"error{time.time_ns()}",
             "object": "chat.completion.chunk",
@@ -499,7 +526,7 @@ async def stream_chat_response(data: ChatCompletionRequest, session: UserSession
         try:
             if stream_id:
                 # 清理同步：先从ChatClientStream中删除，再从active_streams中删除
-                # session.chat_client.unregister_stream(stream_id)
+                session.chat_client.unregister_stream(stream_id)
                 await delete_stream_id(stream_id)
                 logger.info(f"Stream {stream_id} unregistered")
         except Exception as e:
@@ -577,7 +604,7 @@ async def chat_completions(
     mcp_server_ids = data.mcp_server_ids
     # Set session context for telemetry
     context_token = set_session_context(user_id)
-    # user token for agentcore mcp/gateway
+    # user token for agentcore mcp
     user_token = data.token if data.token else ""
     # 获取用户会话
     session = await get_or_create_user_session(user_id=user_id,mcp_server_ids=mcp_server_ids,user_token=user_token)

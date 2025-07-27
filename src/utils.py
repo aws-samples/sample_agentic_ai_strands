@@ -17,7 +17,7 @@ import threading
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 from botocore.exceptions import ClientError
-import asyncio
+import requests
 import uuid
 
 # Initialize logger
@@ -41,7 +41,7 @@ active_streams = {}
 active_streams_lock = threading.RLock()
 session_lock = threading.RLock()
 
-
+REGION = os.environ.get('AWS_REGION', 'us-west-2')
 def generate_id_from_string(input_string):
     # 基于输入字符串生成UUID5
     namespace = uuid.NAMESPACE_DNS  # 使用预定义的命名空间
@@ -54,7 +54,7 @@ def get_secret(secret_name):
     session = boto3.session.Session()
     client = session.client(
         service_name='secretsmanager',
-        region_name=  os.environ.get('AWS_REGION', 'us-east-1')
+        region_name=  REGION
 
     )
     try:
@@ -73,8 +73,7 @@ def get_secret(secret_name):
 
 if DDB_TABLE:
     try:
-        region = os.environ.get('AWS_REGION', 'us-east-1')
-        dynamodb_client = boto3.resource('dynamodb', region_name=region)
+        dynamodb_client = boto3.resource('dynamodb', region_name=REGION)
         logger.info(f"已连接到DynamoDB, 表名: {DDB_TABLE}")
     except Exception as e:
         logger.error(f"DynamoDB连接失败: {e}")
@@ -561,3 +560,19 @@ def is_endpoint_sse(url):
     except Exception as e:
         print(f"解析URL时出错: {e}")
         return False
+
+
+def get_cognito_token(user_pool_id: str, client_id: str, client_secret: str, scope_string: str) -> dict:
+    user_pool_id_without_underscore = user_pool_id.replace("_", "")
+    url = f"https://{user_pool_id_without_underscore}.auth.{REGION}.amazoncognito.com/oauth2/token"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "scope": scope_string,
+
+    }
+    response = requests.post(url, headers=headers, data=data)
+    response.raise_for_status()
+    return response.json()

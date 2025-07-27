@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import sys
 from boto3.session import Session
 import asyncio
-from mcp import ClientSession
+from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.streamable_http import streamablehttp_client
 from gw_utils import get_token
 cognito_client = boto3.client('cognito-idp')
@@ -16,7 +16,7 @@ auth_response = cognito_client.initiate_auth(
     ClientId=client_id,
     AuthFlow='USER_PASSWORD_AUTH',
     AuthParameters={
-        'USERNAME': 'testuser',
+        'USERNAME': 'testuser2',
         'PASSWORD': 'MyPassword123!'
     }
 )
@@ -27,7 +27,7 @@ print(f"===========bearer_token:=========\n{bearer_token}")
 async def test_mcp():
     boto_session = Session()
     region = boto_session.region_name
-    
+
     print(f"Using AWS region: {region}")
 
     load_dotenv(dotenv_path=".env_mcp")
@@ -35,7 +35,6 @@ async def test_mcp():
     if not agent_arn or not bearer_token:
         print("Error: AGENT_ARN or BEARER_TOKEN not retrieved properly")
         sys.exit(1)
-    
     encoded_arn = agent_arn.replace(':', '%3A').replace('/', '%2F')
     mcp_url = f"https://bedrock-agentcore.{region}.amazonaws.com/runtimes/{encoded_arn}/invocations?qualifier=DEFAULT"
     headers = {
@@ -73,6 +72,13 @@ async def test_mcp():
                 
                 print(f"✅ Successfully connected to MCP server!")
                 print(f"Found {len(tool_result.tools)} tools available.")
+                
+                result = await session.call_tool("upload_file", arguments={"file_name": "hello.md", "file_content": "helloworld!!"})
+                result_unstructured = result.content[0]
+                if isinstance(result_unstructured, types.TextContent):
+                    print(f"Tool result: {result_unstructured.text}")
+                result_structured = result.structuredContent
+                print(f"Structured tool result: {result_structured}")
                 
     except Exception as e:
         print(f"❌ Error connecting to MCP server: {e}")

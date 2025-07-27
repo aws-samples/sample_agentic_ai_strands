@@ -84,10 +84,14 @@ bash run_setup.sh
 ```
 运行完成后会在`agentcore_scripts/`目录下生成2个新文件:  
 
-从`identity.txt`文件中找到下面2个配置, 后面配置.env会用到:   
+从`.env_cognito`文件中找到下面2个配置, 后面配置.env会用到:   
 ```
 pool_id=us-west-xxx
 app_client_id=xxxxxx
+m2m_client_id=
+m2m_client_secret=
+scope_string=
+discovery_url=
 ```
 
 从`iam-role.txt`文件中找到role arn，后面创建agentcore runtime会用到:   
@@ -123,9 +127,11 @@ API_KEY=123456
 # COGNITO AUTHENTICATION CONFIGURATION
 # AWS Cognito UserPool configuration for JWT token authentication
 # =============================================================================
-COGNITO_USER_POOL_ID=<your_cognito_userpool_id>
-COGNITO_CLIENT_ID=<your_cognito_client_id>
-
+COGNITO_USER_POOL_ID=<pool_id>
+COGNITO_CLIENT_ID=<app_client_id>
+COGNITO_M2M_CLIENT_ID=<m2m_client_id>
+COGNITO_M2M_CLIENT_SECRET=<m2m_client_secret>
+COGNITO_M2M_CLIENT_SCOPE=<scope_string>
 # =============================================================================
 # AWS Infra CONFIGURATION
 # The default ECS platform is amd64, you can choose linux/amd64  or  linux/arm64

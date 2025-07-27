@@ -442,7 +442,7 @@ async def chat_completions(
     # 验证用户身份
     auth_result = await authenticate_user(auth)
     
-    # 获取用户token
+    # 获取用户token,用于后续更精细化权限控制
     token = auth.credentials
     
     # 获取用户ID

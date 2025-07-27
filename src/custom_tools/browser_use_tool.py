@@ -17,8 +17,14 @@ from typing import Optional,Dict,List
 from pydantic import BaseModel
 import time
 import logging
-# sys.path.append("../interactive_tools")
-from .interactive_tools.browser_viewer import BrowserViewerServer
+# Handle both module and script execution
+try:
+    from .interactive_tools.browser_viewer import BrowserViewerServer
+except ImportError:
+    # Add the parent directory to path for absolute imports
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, parent_dir)
+    from custom_tools.interactive_tools.browser_viewer import BrowserViewerServer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -54,12 +60,10 @@ async def run_browser_task(
         history = await agent.run()
         result = history.final_result()
         if result:
-            content: Content = Content.model_validate_json(result)
-
-            logger.info('\n--------------------------------')
-            logger.info(f'Title:            {content.title}')
-            logger.info(f'URL:              {content.url}')
-            logger.info(f'Content:         {content.content}')
+            # skip validation
+            # content: Content = Content.model_validate_json(result)
+            logger.info('\n--------------browser use result-------------')
+            logger.info(f"{result}")
             return result
         else:
             logger.info('No result')
@@ -69,6 +73,7 @@ async def run_browser_task(
         logger.error(f"❌ Error during task execution:[/bold red] {str(e)}")
         import traceback
         traceback.print_exc()
+        return "No result"
         
 
 async def live_view_with_browser_use(prompt,client:BrowserClient, model_id:str , use_vision: bool, region:str):
@@ -113,8 +118,7 @@ async def live_view_with_browser_use(prompt,client:BrowserClient, model_id:str ,
             t1 = time.time()
             browser_session = BrowserSession(
                 cdp_url=ws_url,
-                browser_profile=browser_profile,
-                keep_alive=True,  # Keep browser alive between tasks
+                browser_profile=browser_profile
             )
             logging.info(f"Browser session created in {time.time() - t1} seconds")
 
@@ -123,7 +127,7 @@ async def live_view_with_browser_use(prompt,client:BrowserClient, model_id:str ,
 
             # Create ChatBedrockConverse once
             llm = ChatBedrockConverse(
-                model_id=model_id,
+                model=model_id,
                 region_name=region,
             )
             logger.debug(
@@ -183,10 +187,9 @@ class BrowserUseTool:
             self.viewer_url = None
             logger.info("Browser client stopped")
         
-    @tool
-    def browser_init(self) -> str:
+    def _initialize_browser(self) -> str:
         """
-        Initialize the browser client, before use browser tool
+        Private method to initialize the browser client
         """
         logger.info(f"BrowserUseTool: browser_init")
         if self.client is None:
@@ -194,11 +197,35 @@ class BrowserUseTool:
             self.client.start()
             viewer = BrowserViewerServer(self.client, port=8000)
             self.viewer_url = viewer.start(open_browser=True)
-            return "Browser client initialized"
+            return f"Browser client initialized, you can visit live session in :<view_url>{self.viewer_url}</view_url>"
         else:
             return "Browser client has already initialized"
+    
     @tool
-    def browse(self,task:str) -> str: 
+    def browser_init(self) -> str:
+        """
+        Initialize the browser client, before use browser tool
+        """
+        return self._initialize_browser()
+    
+    def _browse_task(self, task: str) -> str:
+        """
+        Private method to execute browser automation task
+        """
+        logger.info(f"BrowserUseTool: {task}")
+        if self.client is None:
+            ret = self._initialize_browser()
+            logger.info(f"Browser init:{ret}")
+        
+        # Ensure client is not None after initialization
+        if self.client is not None:
+            result = asyncio.run(live_view_with_browser_use(prompt=task, client=self.client, model_id = self.model_id, use_vision=self.use_vision, region = self.region))
+            return result
+        else:
+            return "Failed to initialize browser client"
+    
+    @tool
+    def browse(self,task:str) -> str:
         """
         This tool will delegate the task to an agent that can run a browser automation task using browsers, please make sure to initialize the browser client ahead.
 
@@ -208,18 +235,11 @@ class BrowserUseTool:
         Returns:
             the task result defined in a structured json with title, url, content
         """
-        logger.info(f"BrowserUseTool: {task}")
-        if self.client is None:
-            ret = self.browser_init()
-            logger.info(ret)
-
-        
-        result = asyncio.run(live_view_with_browser_use(prompt=task, client=self.client, model_id = self.model_id, use_vision=self.use_vision, region = self.region))
-        return result
+        return self._browse_task(task)
 
 if __name__ == "__main__":
     browser = BrowserUseTool('us-west-2',model_id="us.anthropic.claude-3-7-sonnet-20250219-v1:0")
-    browser.browser_init()
-    browser.browse(task="find the top 1 sales bluetooth headphones in Amazon")
+    browser._initialize_browser()
+    browser._browse_task(task="find the top 1 sales bluetooth headphones in Amazon")
     browser.close_platform()
     

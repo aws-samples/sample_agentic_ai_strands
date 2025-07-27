@@ -16,7 +16,7 @@ from typing import Dict, AsyncGenerator, Optional, List, AsyncIterator, Any
 from dotenv import load_dotenv
 from strands_agent_client import StrandsAgentClient
 from mcp_client_strands import StrandsMCPClient
-from utils import maybe_filter_to_n_most_recent_images, remove_cache_checkpoint,get_stream_id
+from utils import get_stream_id
 from constant import *
 import queue
 
@@ -61,44 +61,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
         if stream_id in self.stop_flags:
             del self.stop_flags[stream_id]
             logger.info(f"Unregistered stream: {stream_id}")
-        
-        # Stop and clean up monitor thread
-        self._stop_monitor_thread(stream_id)
-            
-    def _start_monitor_thread(self, stream_id: str):
-        """Start a monitor thread for the given stream"""
-        if stream_id in self.monitor_threads:
-            logger.warning(f"Monitor thread for stream {stream_id} already exists")
-            return
-            
-        # Create stop event for this thread
-        stop_event = threading.Event()
-        self.thread_stop_events[stream_id] = stop_event
-        
-        # Create and start monitor thread
-        monitor_thread = threading.Thread(
-            target=self._monitor_stream_status,
-            args=(stream_id, stop_event),
-            daemon=True,
-            name=f"StreamMonitor-{stream_id}"
-        )
-        self.monitor_threads[stream_id] = monitor_thread
-        monitor_thread.start()
-        logger.info(f"Started monitor thread for stream: {stream_id}")
-    
-    def _stop_monitor_thread(self, stream_id: str):
-        """Stop the monitor thread for the given stream"""
-        if stream_id in self.thread_stop_events:
-            self.thread_stop_events[stream_id].set()
-            del self.thread_stop_events[stream_id]
-            
-        if stream_id in self.monitor_threads:
-            monitor_thread = self.monitor_threads[stream_id]
-            # Give thread a moment to stop gracefully
-            monitor_thread.join(timeout=1.0)
-            del self.monitor_threads[stream_id]
-            logger.info(f"Stopped monitor thread for stream: {stream_id}")
-            self._stop_agent_thread(stream_id)
+        self._stop_agent_thread(stream_id)
     
     def _start_agent_thread(self, stream_id: str, prompt: list,**kwargs:dict):
         """Start an agent processing thread for the given stream"""
@@ -182,8 +145,6 @@ class StrandsAgentClientStream(StrandsAgentClient):
             logger.error(f"Error in agent thread for stream {stream_id}: {e}")
             # Put error in queue
             stream_queue.put({"type": "error", "data": {"message": str(e)}})
-        finally:
-            logger.info(f"Agent thread for stream {stream_id} terminated")
     
     async def _agent_stream_worker(self, stream_id: str, prompt: list, stop_event: threading.Event, stream_queue,use_swarm):
         """Async worker for agent stream processing"""
@@ -209,44 +170,6 @@ class StrandsAgentClientStream(StrandsAgentClient):
         except Exception as e:
             logger.error(f"Error in agent stream worker for {stream_id}: {e}")
             stream_queue.put({"type": "error", "data": {"message": str(e)}})
-    
-    def _monitor_stream_status(self, stream_id: str, stop_event: threading.Event):
-        """Monitor stream status in a separate thread"""
-        logger.info(f"Monitor thread started for stream: {stream_id}")
-        
-        # Create event loop once for this thread
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        try:
-            while not stop_event.is_set():
-                try:
-                    # Check if stream still exists in remote DDB
-                    stream_exists = loop.run_until_complete(get_stream_id(stream_id=stream_id))
-                    
-                    # If stream doesn't exist and agent exists, clean up
-                    if not stream_exists and hasattr(self, 'agent') and self.agent:
-                        logger.info(f"Stream {stream_id} not found in remote, cleaning up agent")
-                        # Set stop flag to terminate the stream
-                        if stream_id in self.stop_flags:
-                            self.stop_flags[stream_id] = True
-                        # Clean up agent
-                        # del self.agent
-                        # self.agent = None
-                        break
-                        
-                except Exception as e:
-                    logger.error(f"Error in monitor thread for stream {stream_id}: {e}")
-                
-                # Wait for 3 seconds before next check
-                if stop_event.wait(timeout=3.0):
-                    break  # Stop event was set, exit immediately
-                
-        except Exception as e:
-            logger.error(f"Monitor thread for stream {stream_id} encountered error: {e}")
-        finally:
-            loop.close()
-            logger.info(f"Monitor thread for stream {stream_id} terminated")
     
     async def   _process_stream_response(self, stream_id: Optional[str], response) -> AsyncIterator[Dict]:
         """Process the raw response from converse_stream"""
@@ -336,8 +259,6 @@ class StrandsAgentClientStream(StrandsAgentClient):
         # Register this stream if an ID is provided
         if stream_id:
             self.register_stream(stream_id)
-            # Start monitor thread for this stream
-            self._start_monitor_thread(stream_id)
         
         # Convert system messages to system prompt
         system_prompt = ""
