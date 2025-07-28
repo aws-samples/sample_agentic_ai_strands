@@ -1,0 +1,25 @@
+default_agent: agent_runtime
+agents:
+  agent_runtime:
+    name: agent_runtime
+    entrypoint: src/agentcore_runtime.py
+    platform: linux/arm64
+    container_runtime: docker
+    aws:
+      execution_role: arn:aws:iam::<account_id>:role/agentcore-strands_agent_role-role
+      account: '<account_id>'
+      region: <region>
+      ecr_repository: 
+      ecr_auto_create: false
+      network_configuration:
+        network_mode: PUBLIC
+      protocol_configuration:
+        server_protocol: HTTP
+      observability:
+        enabled: true
+    bedrock_agentcore:
+      agent_id: 
+      agent_arn: 
+      agent_session_id: null
+    authorizer_configuration: null
+    oauth_configuration: null

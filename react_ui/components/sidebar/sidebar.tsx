@@ -213,16 +213,16 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 onCheckedChange={setEnableStream}
               />
             </div> */}
-            {/* <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <label htmlFor="use-swarm" className="text-sm font-medium">
-                Use Swarm
+                Enable Swarm (Multi Agents)
               </label>
               <Switch
                 id="use-swarm"
                 checked={useSwarm}
                 onCheckedChange={setUseSwarm}
               />
-            </div> */}
+            </div>
             <div className="flex items-center justify-between">
               <label htmlFor="use-memory" className="text-sm font-medium">
                 Use Memory

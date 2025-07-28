@@ -46,7 +46,7 @@ load_dotenv()  # load env vars from .env
 
 llm_model_list = {}
 shared_mcp_server_list = {}
-
+DEV_MODE = os.environ.get("DEV_MODE")
 
 
 @asynccontextmanager
@@ -131,7 +131,7 @@ async def remove_history(
             }
     }
     
-    response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload)
+    response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload,development=DEV_MODE)
     
     return JSONResponse(
             content={"errno": 0, "msg": "removed history"},
@@ -167,7 +167,7 @@ async def stop_stream(
         "data":{"stream_id":stream_id}
     }
     
-    response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload)
+    response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload,development=DEV_MODE)
     # 立即返回响应给客户端
     return JSONResponse(
         content={"errno": 0, "msg": "Stream stopping initiated"},
@@ -397,7 +397,7 @@ async def stream_chat_response(data: ChatCompletionRequest,
             pass
     
     try:        
-        boto3_response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload)
+        boto3_response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload,development=DEV_MODE)
         # 创建心跳生成器
         heartbeat_gen = heartbeat_sender()
         

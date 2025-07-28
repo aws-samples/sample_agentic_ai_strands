@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from urllib.parse import urlparse
 from typing import Dict, Any
 import json
-from botocore.exceptions import ClientError
+import requests
 from utils import generate_id_from_string
 import uuid
 import logging
@@ -31,8 +31,36 @@ agentcore_client = boto3.client(
 
 invoke_agent_arn = os.environ.get("AGENTCORE_RUNTIME_ARN")
 
-def invoke_agentcore_runtime(session_id:str,payload:Dict[str,Any],qualifier="DEFAULT"):
-
+def invoke_local_runtime(session_id:str,payload:Dict[str,Any]):
+    headers = {
+        "X-Amzn-Trace-Id": "your-trace-id", 
+        "Content-Type": "application/json",
+        "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id": "7a750a8c-11ab-447a-aec9-fe7b38402088222"
+    }
+    try:
+        invoke_response = requests.post(
+            "http://127.0.0.1:8080/invocations",
+            headers=headers,
+            data=json.dumps(payload),
+            stream=True
+        )
+        if invoke_response.status_code == 200:
+            return {"contentType":"text/event-stream","response":invoke_response}
+        elif invoke_response.status_code >= 400:
+            logger.info(f"Error Response ({invoke_response.status_code}):")
+            error_data = invoke_response.json()
+            logger.info(json.dumps(error_data, indent=2))
+        else:
+            logger.info(f"Unexpected status code: {invoke_response.status_code}")
+            logger.info("Response text:")
+            logger.info(invoke_response.text[:500])
+    except Exception as e:
+        logger.info(f"{str(e)}")
+        
+    
+def invoke_agentcore_runtime(session_id:str,payload:Dict[str,Any],qualifier="DEFAULT",development=False):
+    if development:
+        return invoke_local_runtime(session_id=session_id,payload=payload)
     try:
         boto3_response = agentcore_client.invoke_agent_runtime(
                     agentRuntimeArn=invoke_agent_arn,

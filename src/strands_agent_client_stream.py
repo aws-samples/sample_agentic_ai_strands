@@ -15,8 +15,6 @@ import threading
 from typing import Dict, AsyncGenerator, Optional, List, AsyncIterator, Any
 from dotenv import load_dotenv
 from strands_agent_client import StrandsAgentClient
-from mcp_client_strands import StrandsMCPClient
-from utils import get_stream_id
 from constant import *
 import queue
 
@@ -153,7 +151,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
                 logger.error(f"No agent available for stream {stream_id}")
                 return
                 
-            response = self.agent.stream_async(prompt)
+            response = self.agent.stream_async(prompt,stream_queue=stream_queue)
             async for event in self._process_stream_response(stream_id, response):
                 if stop_event.is_set():
                     logger.info(f"Agent stream worker for {stream_id} stopped by event")
@@ -313,10 +311,10 @@ class StrandsAgentClientStream(StrandsAgentClient):
             return
         kwargs = dict(use_swarm=use_swarm)
         prompt_block = messages[-1]['content']
-        if use_swarm:
-            for block in prompt_block:
-                if 'text' in block:
-                    block['text'] += "\nUse swarm tool to create a team of size 3, coordination_pattern is collaborative to discuss the plan first."
+        # if use_swarm:
+        #     for block in prompt_block:
+        #         if 'text' in block:
+        #             block['text'] += "\nUse swarm tool to create a team of size 3, coordination_pattern is collaborative to discuss the plan first."
         
         # Start agent thread to handle stream processing
         self._start_agent_thread(stream_id, prompt_block ,**kwargs)
@@ -394,6 +392,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
                 elif event.get("type") == "message_stop":
                     stop_reason = event["data"].get("stopReason", "")
                     if stop_reason == "end_turn":
+                        logger.info(f"stop_reason:{stop_reason}")
                         # Clean up browser and code interpreter tools
                         self.clean_builtin_tools()
                         self.unregister_stream(stream_id)

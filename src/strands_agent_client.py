@@ -21,7 +21,7 @@ from botocore.config import Config
 from custom_tools import mem0_memory
 from strands_tools.code_interpreter import AgentCoreCodeInterpreter
 from custom_tools.memory_hook import AgentMemoryHooks
-from strands.multiagent import Swarm
+from multi_agents.research_swarm import DeepResearchSwarm
 # from custom_tools.browser_mcp import BrowserMCPClient
 from custom_tools.browser_use_tool import BrowserUseTool
 from strands.telemetry import StrandsTelemetry
@@ -252,7 +252,16 @@ class StrandsAgentClient(ChatClient):
                                        agent_hooks = [], 
                                        tools=[],
                                        system_prompt=None):
-        """Create a Swarm team for deep researh"""
+        """Create a Swarm agent for deep researh"""
+        if not self.agent or not isinstance(self.agent, DeepResearchSwarm):
+            self.agent =  DeepResearchSwarm(model=model,
+                                    agent_hooks=agent_hooks,
+                                    tools=tools,
+                                    system_prompt=system_prompt
+                                    )
+        return self.agent
+        
+        
         
     def _create_single_agent_with_tools(self, 
                                        model, 
@@ -260,15 +269,16 @@ class StrandsAgentClient(ChatClient):
                                        tools=[],
                                        system_prompt=None):
         """create a single agnet"""
-        agent = Agent(
-            model=model,
-            hooks=agent_hooks,
-            callback_handler=None,
-            system_prompt=system_prompt,
-            tools=tools,
-            load_tools_from_directory=False
-        )
-        return agent
+        if not self.agent or not isinstance(self.agent, Agent):
+            self.agent =  Agent(
+                model=model,
+                hooks=agent_hooks,
+                callback_handler=None,
+                system_prompt=system_prompt,
+                tools=tools,
+                load_tools_from_directory=False
+            )
+        return self.agent
            
     async def _create_agent_with_tools(self, 
                                        model_id, 

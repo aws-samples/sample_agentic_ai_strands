@@ -8,7 +8,7 @@ from strands import Agent
 from strands.multiagent import Swarm
 from strands.types.content import ContentBlock
 import asyncio
-from typing import AsyncIterator,Dict,Any
+from typing import AsyncIterator,Dict,Any,Union
 import json
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -24,7 +24,7 @@ class DeepResearchSwarm:
     def __init__(self,model="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
                  agent_hooks=[],
                  tools=[],
-                 system_prompt="",
+                 system_prompt=None,
                  callback_handler = None):
         self.callback_handler = callback_handler
         self.model = model
@@ -185,6 +185,8 @@ class DeepResearchSwarm:
             Maintain high standards for accuracy and reliability.
             Challenge assumptions and verify all significant claims.
             
+            handoff to 'synthesis_writer' to incooperate all your inputs and let't him to write the final report
+            
             {original_system_prompt}
             """
         )
@@ -207,9 +209,110 @@ class DeepResearchSwarm:
             max_iterations=40,  # More iterations for thorough investigation
             execution_timeout=1800.0,  # 30 minutes for deep research
             node_timeout=600.0,  # 10 minutes per agent
-            repetitive_handoff_detection_window=10,
+            repetitive_handoff_detection_window=10, # There must be >= 4 unique agents in the last 10 handoffs
             repetitive_handoff_min_unique_agents=4
         )
+        
+    async def stream_async(self, prompt: Union[str, list[ContentBlock]], **kwargs: Any) -> AsyncIterator[Any]:
+        """
+        Stream research results as they become available.
+        
+        Args:
+            prompt: Research topic/question as string or list of ContentBlocks
+            **kwargs: Additional parameters like research_depth, specific_focus
+        
+        Yields:
+            Dict: Streaming events with type and data
+        """
+        # Extract parameters from kwargs
+        research_depth = kwargs.get("research_depth", "comprehensive")
+        specific_focus = kwargs.get("specific_focus", None)
+        
+        # Handle different prompt types
+        if isinstance(prompt, list):
+            # If it's a list of ContentBlocks, extract text from the first text block
+            topic = None
+            for block in prompt:
+                if hasattr(block, 'text') and block.text:
+                    topic = block.text
+                    break
+            if not topic:
+                topic = str(prompt[0]) if prompt else "Research request"
+        else:
+            topic = str(prompt)
+        
+        
+        stream_queue = kwargs.get("stream_queue", None)
+                
+        def emit(event):
+            if stream_queue:
+                stream_queue.put(event)
+            else:
+                logger.info(event)
+            
+        def stream_callback(**kwargs):
+            if 'message' in kwargs:
+                message = kwargs['message']
+                if message.get('role') == 'user' and message.get('content'):
+                    content = message['content']
+                    for content_block in content:
+                        if 'toolResult' in content_block:
+                            toolUseId = content_block['toolResult']['toolUseId']
+                            emit({"type": "toolResult", "toolUseId":toolUseId,"data": content_block['toolResult']})
+                    
+            elif 'event' in kwargs:
+                event = kwargs['event']
+                # logger.info(event)
+                # Handle message start
+                if "messageStart" in event:
+                    emit({"type": "message_start", "data": event["messageStart"]})
+                    
+                # Handle content block start
+                if "contentBlockStart" in event:
+                    block_start = event["contentBlockStart"]
+                    emit({"type": "block_start", "data": block_start})              
+
+                # Handle content block delta
+                if "contentBlockDelta" in event:
+                    delta = event["contentBlockDelta"]
+                    emit({"type": "block_delta", "data": delta})  
+
+                # Handle content block stop
+                if "contentBlockStop" in event:
+                    emit({"type": "block_stop", "data": event["contentBlockStop"]})   
+
+                # Handle message stop
+                if "messageStop" in event:
+                    # need to ignore the end turn flog for the agent, unless the final result is done
+                    if not event["messageStop"].get("stopReason") == "end_turn":
+                        emit({"type": "message_stop", "data": event["messageStop"]})     
+
+                # Handle metadata
+                if "metadata" in event:
+                    emit({"type": "metadata", "data": event["metadata"]})
+        
+        for agent in list(self.agents.values()):
+            agent.callback_handler =  stream_callback         
+        
+        try:
+            # Execute the research
+            result = await self.research(
+                topic=topic,
+                research_depth=research_depth,
+                specific_focus=specific_focus
+            )
+            logger.info(f"Swarm Research completed with: {result.status}")
+            emit({"type": "message_stop", "data": {"stopReason":"end_turn"}})  
+                
+        except Exception as e:
+            logger.error(f"Error during streaming research: {e}")
+            yield {
+                "type": "error",
+                "data": {
+                    "message": f"An error occurred during swarm execution:{str(e)}"
+                }
+            }
+        
     
     async def research(self, topic, research_depth="comprehensive", specific_focus=None):
         """
@@ -306,32 +409,34 @@ class DeepResearchSwarm:
             return {"status": result.status, "error": "Research incomplete"}
 
 
-def message_buffer_handler(**kwargs):
-    # When a new message is created from the assistant, print its content
-     # Track tool usage
-    if "message" in kwargs and kwargs["message"].get("role") == "assistant":
-        print(json.dumps(kwargs["message"], indent=2))
-        
+# def message_buffer_handler(**kwargs):
+#     # When a new message is created from the assistant, print its content
+#      # Track tool usage
+#     if "message" in kwargs and kwargs["message"].get("role") == "assistant":
+#         print(json.dumps(kwargs["message"], indent=2))
+# def event_queue_handler(**kwargs):
+#     ## put the  event in a queue
+#     event_queue.put(kwargs["event"])
 
 async def main():
     """Example usage of the Deep Research Swarm."""
     
     # Create the research swarm
-    research_team = DeepResearchSwarm(callback_handler=message_buffer_handler)
+    research_team = DeepResearchSwarm(callback_handler=None)
     
     # Example 1: Basic research
-    print("=== Example 1: Basic Research ===")
-    result = await research_team.research(
-        topic="The impact of artificial intelligence on software development practices",
-        research_depth="comprehensive",
-        specific_focus=["developer productivity", "code quality", "job market implications"]
-    )
+    # print("=== Example 1: Basic Research ===")
+    # result = await research_team.research(
+    #     topic="The impact of artificial intelligence on software development practices",
+    #     research_depth="comprehensive",
+    #     specific_focus=["developer productivity", "code quality", "job market implications"]
+    # )
     
    
-    summary = research_team.get_research_summary(result)
-    print(f"Research Status: {summary['status']}")
-    print(f"Agents Involved: {summary['agents_involved']}")
-    print(f"Final Result Preview: {summary['final_result'][:500]}...")
+    # summary = research_team.get_research_summary(result)
+    # print(f"Research Status: {summary['status']}")
+    # print(f"Agents Involved: {summary['agents_involved']}")
+    # print(f"Final Result Preview: {summary['final_result'][:500]}...")
     
     # Example 2: Research with context files
     # print("\n=== Example 2: Research with Context ===")
@@ -340,6 +445,15 @@ async def main():
     #     topic="Analysis of our current system architecture",
     #     context_files=["system_docs.md", "api_spec.json"]
     # )
+    
+    # Example 3: Streaming research
+    print("\n=== Example 3: Streaming Research ===")
+    async for event in research_team.stream_async(
+        "The impact of AI on software development",
+        research_depth="comprehensive",
+        specific_focus=["developer productivity", "code quality"]
+    ):
+        print(event)        
 
 
 if __name__ == "__main__":

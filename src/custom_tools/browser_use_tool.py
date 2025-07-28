@@ -6,6 +6,8 @@ from bedrock_agentcore.tools.browser_client import BrowserClient
 from browser_use.browser import BrowserProfile
 # from browser_use.llm import ChatAWSBedrock
 from langchain_aws import ChatBedrockConverse
+from langchain_core.utils import secret_from_env
+
 from contextlib import suppress
 import asyncio
 from strands import tool
@@ -120,15 +122,15 @@ async def live_view_with_browser_use(prompt,client:BrowserClient, model_id:str ,
                 cdp_url=ws_url,
                 browser_profile=browser_profile
             )
-            logging.info(f"Browser session created in {time.time() - t1} seconds")
-
             # Initialize the browser session
             await browser_session.start()
-
+            logging.info(f"Browser session started in {time.time() - t1} seconds")
             # Create ChatBedrockConverse once
             llm = ChatBedrockConverse(
                 model=model_id,
                 region_name=region,
+                aws_access_key_id = os.environ.get("BEDROCK_AWS_ACCESS_KEY_ID",os.environ.get("AWS_ACCESS_KEY_ID")),
+                aws_secret_access_key = os.environ.get("BEDROCK_AWS_SECRET_ACCESS_KEY",os.environ.get("AWS_SECRET_ACCESS_KEY"))
             )
             logger.debug(
                 "[green]✅ Browser session initialized and ready for tasks[/green]\n"
@@ -195,9 +197,13 @@ class BrowserUseTool:
         if self.client is None:
             self.client = BrowserClient(self.region)
             self.client.start()
-            viewer = BrowserViewerServer(self.client, port=8000)
-            self.viewer_url = viewer.start(open_browser=True)
-            return f"Browser client initialized, you can visit live session in :<view_url>{self.viewer_url}</view_url>"
+            # viewer = BrowserViewerServer(self.client, port=8000)
+            # self.viewer_url = viewer.start(open_browser=False)
+            # return f"Browser client initialized, you can visit live session in :<view_url>{self.viewer_url}</view_url>"
+            presigned_url = self.client.generate_live_view_url(expires=900)
+            logger.info(f"Browser client initialized, you can visit live session in :<view_url>{presigned_url}</view_url>")
+            return f"Browser client initialized, you can visit live session in :<view_url>{presigned_url}</view_url>"
+
         else:
             return "Browser client has already initialized"
     

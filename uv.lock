@@ -5672,7 +5672,7 @@ requires-dist = [
     { name = "browser-use", specifier = "<0.3.3" },
     { name = "fastapi", specifier = ">=0.115.6" },
     { name = "langchain-aws" },
-    { name = "mcp", specifier = ">=1.12.2" },
+    { name = "mcp", specifier = ">=1.12.0" },
     { name = "nest-asyncio" },
     { name = "openai", specifier = ">=1.75.0" },
     { name = "pandas", specifier = ">=2.2.3" },
