@@ -1,130 +1,347 @@
-# Agentic AI with Strands Agents SDK 
+User: # Agentic AI with Bedrock AgentCore and Strands Agents SDK [English](./README.en.md)
 
-## 1. Overview
 
-This is a versatile Agentic AI application developed based on the Strands Agents SDK, which achieves seamless connection between large language models and external tool systems through MCP integration. Serving as the core engine, the Strands SDK provides powerful agent capabilities and tool integration mechanisms, endowing the entire system with high scalability and practicality.
+## 1.概述
 
-### 1.1 Key Features
-- **Decoupled Frontend and Backend** - Both MCP Client and MCP Server can be deployed on the server side, allowing users to interact directly through a web browser via the backend web service to access LLM and MCP Server capabilities and resources
-- **React UI** - React-based user interface enabling users to interact with models, manage MCP servers, and display tool call results and reasoning processes
-- **MCP Tool Integration** - Provides STDIO, StreamableHTTP, and SSE modes for MCP integration
-- **Multiple Model Providers** - Support for Bedrock, OpenAI, and compatible models
-- **Multi-user Session Management** - Maintains sessions for multiple users
+这是基于Strands Agents SDK开发的通用型Agentic AI应用，通过MCP的集成，实现了大语言模型与外部工具系统的无缝连接。Strands SDK作为核心引擎，提供了强大的代理能力和工具集成机制，使得整个系统具备了高度的可扩展性和实用性。
 
-### 1.2 Technical Features and Advantages
-#### Architectural Benefits
-- Modular Design: Clear layered architecture with well-defined component responsibilities
-- Scalability: Support for various model providers and MCP protocols
-- High Concurrency: Asynchronous processing and streaming response support
-- Resource Management: Comprehensive session and connection lifecycle management
+### 1.1.系统架构图
+![system](assets/agentcore_arc.png) 
+  
+应用总体分为前端web和后端服务两部分，其中前端web和后端服务均以容器化方式部署到Amazon ECS Fargate中, 通过ALB负载均衡提供对外访问链接。
+后端服务提供WEB端的后台服务，如用户session创建，模型选择设置，MCP工具选择，系统提示词设定等，后端服务接收来自WEB端的请求，并把任务发送给Agent Runtime，再由Runtime中的Agent根据用户任务自行决定是否调用浏览器、代码执行器，运行在MCP Runtime上的MCP工具，或者通过Gateway暴露的更多MCP工具。
 
-#### MCP Integration Benefits
-- Standard Compatibility: Fully compatible with the Anthropic MCP standard
-- Multi-protocol Support: Supports multiple transport protocols including Stdio, SSE, and StreamableHTTP
-- Dynamic Management: Runtime dynamic addition and removal of MCP servers
-- Tool Caching: Intelligent tool acquisition and caching mechanism
+### 1.2 功能特点
+- **前后端分离** - MCP Client和MCP Server均可以部署到服务器端，用户可以直接使用web浏览器通过后端web服务交互，从而访问LLM和MCP Sever能力和资源
+- **使用AgentCore核心能力** -集成了Runtime，Gateway，Memory，Browser，Code Interpreter, Indentity, Observeration
+- **身份认证** - 使用AWS Cognito User Pool服务，提供统一的用户注册，鉴权，授权，以及后端MCP runtime，Gateway授权和健全。
+- **React UI** - 基于React的用户界面，允许用户与模型交互并管理MCP服务器，显示工具调用结果和思考过程
+- **多模型提供商** - 支持 Bedrock、OpenAI及兼容模型
+- **多用户会话管理** - 维护多用户session
+- **使用Strands Agents SDK** - 提供单体Agent， Swarm Multi-Agents深度研究模式
 
-#### Strands SDK Benefits
-- Unified Interface: Provides a unified agent interface for different model providers
-- Intelligent Conversation Management: Built-in sliding window conversation manager
-- Tool Integration: Native support for MCP tool integration
-- Observability: Integration with observability tools like Langfuse
+### 1.3 各核心模块说明
 
-#### Application Scenarios
-1. Enterprise Knowledge Assistant: Integration with internal systems and knowledge bases
-2. Deep Research: Connection to search engines and knowledge repositories
-3. Data Analysis Assistant: Connection to databases and BI tools for intelligent data analysis
-4. Office Automation: Integration with calendar, email, document systems, and other office tools
-5. Customer Service: Connection to CRM and ticketing systems for intelligent customer support
+#### Agent Runtime
+1. 运行Strands Agents，由于是通过后端服务来调用runtime，所以这里可以直接采用默认的iam方式做入站认证
+2. 使用Agentcore memory保存长短期记忆
+3. 包含2个python tool，用于直接使用agentcore 的 browser和code interpreter
+4. 可以自行在runtime中安装MCP server
+5. 可以连接MCP runtime或者Gateway 
 
-### 1.3 System Architecture Diagram
-![system](assets/system_diag.png)
+#### MCP Runtime
+1. 自行实现或者选择一些本地代码的MCP server改造成MCP runtime
+2. OAuth方式做入站身份认证，使用cognito userpool 做认证提供方。
+3. 出站认证可以使用OAuth或者API Key Credential Provider两种方式，例如：使用google日历则需要用OAuth，如果是EXA search则直接用API Key Credential Provider。
 
-### 1.4 System Flow Diagram
-![flow](assets/sequenceflow.png)
+#### Gateway 
+1. 实现lambda函数作为gateway target接入，该lambda函数实现场景：tbd
+2. 实现用OpenApi/Smithy描述文档转成一个gateway target接入，该api实现的场景：tbd
+3. OAuth方式做入站身份认证，使用cognito userpool 做认证提供方
+4. 如果目标是lambda，则直接用iam做出站认证
+5. 如果目标是api，则用API Key Credential Provider做出站认证
 
-## 2. Installation Method (Development Mode)
-### 2.1 Dependencies Installation
+### Memory
+1. 使用Strands Agent SDK hook函数，监听AfterInvocationEvent，把每轮对话消息保存成短期记忆。
+2. 使用Strands Agent SDK hook函数，监听AgentInitializedEvent，每次创建Agent时，回复短期记忆
+3. 长期记忆检索模块做成Agent tool，让Agent自主决定是否检索长期记忆
 
-Currently, mainstream MCP Servers are developed based on NodeJS or Python and run on users' PCs, so these dependencies need to be installed on the user's PC.
+### Browser 
+1. 将Browser runtime的CDP协议传给browser use agent，以agent as tool形式使用Browser
+
+### Identity
+使用cognito userpool做为统一的identity provider，使用同一个userpool和client id提供：
+1. WEB前端用户登陆鉴权
+2. Gateway和MCP runtime OAuth鉴权
+
+
+## 2.安装方法 （需要Arm64架构的linux系统，如Mac，或者Graviton EC2）
+### 2.1. 依赖安装
+
+目前主流 MCP Server 基于 NodeJS 或者 Python 开发实现并运行于用户 PC 上，因此用户 PC 需要安装这些依赖。
 
 ### 2.1 NodeJS
 
-Download and install NodeJS from [here](https://nodejs.org/en). This project has been thoroughly tested with `v22.12.0`.
+NodeJS [下载安装](https://nodejs.org/en)，本项目已对 `v22.12.0` 版本充分测试。
 
 ### 2.2 Python
 
-Some MCP Servers are developed in Python, so users must install [Python](https://www.python.org/downloads/). Additionally, this project's code is also Python-based, requiring environment setup and dependencies.
+有些 MCP Server 基于 Python 开发，因此用户必须安装 [Python](https://www.python.org/downloads/)。此外本项目代码也基于 Python 开发，需要安装环境和依赖。
 
-First, install the Python package management tool uv. For details, refer to the [uv](https://docs.astral.sh/uv/getting-started/installation/) official guide.
+首先，安装 Python 包管理工具 uv，具体可参考 [uv](https://docs.astral.sh/uv/getting-started/installation/) 官方指南
 
-### 2.3 Environment Configuration
-After downloading or cloning the project, navigate to the project directory, create a Python virtual environment, and install dependencies:
+### 2.3 Docker(如有可跳过)
+- 安装Docker和Docker Compose：https://docs.docker.com/get-docker/
+- Linux下安装Docker命令：
 ```bash
+# 安装Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# 安装Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+ln -s /usr/bin/docker-compose  /usr/local/bin/docker-compose
+```
+
+### 2.4 创建cognito
+下载克隆该项目后, 进入`agentcore_scripts/`目录下，运行脚本，创建iam role, cognito userpool, agentcore memory.  
+```bash
+cd agentcore_scripts/
+bash run_setup.sh
+```
+运行完成后会在`agentcore_scripts/`目录下生成3个新文件:  
+
+从`.env_cognito`文件中找到下面2个配置, 后面配置.env会用到:   
+```
+pool_id=us-west-xxx
+app_client_id=xxxxxx
+m2m_client_id=
+m2m_client_secret=
+scope_string=
+discovery_url=
+```
+
+从`iam-role.txt`文件中找到role arn，后面创建agentcore runtime会用到:   
+```
+Role ARN: arn:aws:iam::xxxx:role/agentcore-strands_agent_role-role
+```
+
+从`memory.txt`文件中找到memory id，后面创建agentcore runtime会用到:
+```
+✅ Created memory: {memory_id}
+```
+
+
+### 2.5 创建AgentCore Runtime配置
+1. 进入项目目录创建 Python 虚拟环境并安装依赖：  
+```bash
+cd ./sample_agentic_ai_strands
 uv sync
 ```
 
-### 2.4 Environment Variables Setup
-Rename env.example to .env and modify the following variables as needed:
-
-- For using Bedrock overseas (default)
+2. 将`bedrock_agentcore_template.yaml`复制为`.bedrock_agentcore.yaml`,  
 ```bash
-STRANDS_MODEL_PROVIDER=bedrock
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=us-east-1
+cp bedrock_agentcore_template.yaml .bedrock_agentcore.yaml
+```  
+然后将里面的account，region等信息，以及execution_role进行更改，其他role可以从前一步`iam-role.txt`中获取。  
+
+### 2.6 环境变量设置
+- 把env.example 改成.env,根据情况取消注释，修改以下变量：
+- 进入项目目录
+```bash
+cp env.example .env
+```
+  
+- 使用vim 打开.env文件编辑： 
+- ！！⚠️注意COGNITO_M2M_CLIENT_SCOPE变量有空格，需要加双引号
+```bash
+# =============================================================================
+# COGNITO AUTHENTICATION CONFIGURATION
+# AWS Cognito UserPool configuration for JWT token authentication
+# =============================================================================
+COGNITO_USER_POOL_ID=<pool_id>
+COGNITO_CLIENT_ID=<app_client_id>
+COGNITO_M2M_CLIENT_ID=<m2m_client_id>
+COGNITO_M2M_CLIENT_SECRET=<m2m_client_secret>
+COGNITO_M2M_CLIENT_SCOPE="<scope_string>"
+# =============================================================================
+# AWS Infra CONFIGURATION
+# The default ECS platform is amd64, you can choose linux/amd64  or  linux/arm64
+# =============================================================================
+PLATFORM=linux/arm64
+AWS_REGION=us-west-2
+# =============================================================================
+# AGENTCORE CONFIGURATION
+# =============================================================================
+AGENTCORE_REGION=us-west-2
+MEMORY_ID=<your_agentcore_memory_id>
+```  
+
+### 2.7 部署AgentCore Runtime
+运行agentcore cli部署runtime（注意需要在arm环境中）
+```bash
+agentcore launch
+```
+部署完成后，在控制台会看到 `Agent ARN`，请再次打开.env文件，把arn配置到以下环境变量中。
+```bash
+AGENTCORE_RUNTIME_ARN=<your_agentcore_runtime_arn>
 ```
 
-- For using OpenAI-compatible models like SiliconFlow
+
+## 3. 部署前端和Web后端到ECS
+（生产模式，AWS ECS部署）
+请参考 [CDK部署说明](cdk/README-CDK.md)
+![img](assets/ecs_fargate_architecture.png)
+ 这个Demo的部署架构遵循AWS最佳实践，将应用程序部署在私有子网中，通过负载均衡器提供公共访问，并使用Fargate实现无服务器容器管理。 这个部署架构包含以下主要亚马逊云组件：
+1. ECS Cluster：
+ • 运行在Fargate上的无服务器容器环境, 使用ARM架构
+ • 前端服务：最小2个任务，根据CPU使用率自动扩展
+ • 后端服务：最小2个任务，根据CPU使用率自动扩展
+
+2.  VPC ：
+ • 包含公有子网和私有子网，跨越2个可用区
+ • 公有子网中有Internet Gateway和NAT Gateway
+ • 私有子网用于运行ECS任务
+
+3. 应用负载均衡：
+ • 应用负载均衡器(ALB)分发流量
+ • 将/v1/*和/api/*路径的请求路由到后端服务
+ • 将其他请求路由到前端服务
+
+4. 数据存储：
+ • DynamoDB表用于存储用户配置
+
+5. 安全组件：
+ • IAM角色和策略控制访问权限
+ • Secrets Manager生成并存储后端服务API KEY配置信息
+ • 安全组控制网络流量
+
+6. 容器镜像：
+ • 前端和后端容器镜像存储在ECR中
+
+
+## 4. 本地运行agentcore
+可以通过以下命令在本地运行agentcore，并启动一个本地8080服务。 
 ```bash
-AWS_REGION=cn-north-1
-CLIENT_TYPE=strands
-STRANDS_MODEL_PROVIDER=openai
-OPENAI_API_KEY=your_openai_api_key
-OPENAI_BASE_URL=https://api.siliconflow.cn/v1
+uv run src/agentcore_runtime.py
 ```
 
-- The default configuration supports models like `DeepSeek-R1` and `Qwen3`. To support other models (must be tool use compatible), modify the [conf/config.json](conf/config.json) configuration, for example:
-
+- 可以使用postman等工具发起post调用:
+request url:  
+`http://127.0.0.1:8080/invocations`
+payload如下： 
 ```json
-  {
-    "model_id": "Qwen/Qwen3-235B-A22B",
-    "model_name": "Qwen3-235B-A22B"
-  },
-  {
-    "model_id": "Qwen/Qwen3-30B-A3B",
-    "model_name": "Qwen3-30B-A3B"
-  },
-  {
-    "model_id": "Pro/deepseek-ai/DeepSeek-R1",
-    "model_name": "DeepSeek-R1-Pro"
-  },
-  {
-    "model_id": "deepseek-ai/DeepSeek-V3",
-    "model_name": "DeepSeek-V3-free"
-  }
+{
+        "user_id":"a8d153a0-4091-70ee-58ae-b2bd2fa731e6",
+        "request_type":"chatcompletion",
+        "data" :{
+                "model": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+                "mcp_server_ids": [],
+                "extra_params":{"use_mem":false,"use_swarm":false,"use_code_interpreter":false,"use_browser":false},
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "The impact of AI on software development"
+                            }
+                        ]
+                    }
+                ]
+            }
+    }
+```
+## 5. 示例
+### 开启Swarm做deepresearch
+- 安装AWS Knowledge MCP server
+![alt text](assets/add_mcp2.png)
+  
+```json
+{
+    "mcpServers": {
+        "aws-knowledge": {
+            "url": "https://knowledge-mcp.global.api.aws"
+        }
+    }
+}
+```
+- 选择模型`Claude 4 Sonnet` or `Claude 3.7 Sonnet`, 调整`Max Tokens: 30600`
+
+- 开启Swarm开关,这种模式下，会启动一个Multi Agents小组进行deep research：
+```python
+{
+    "research_coordinator": research_coordinator,
+    "academic_researcher": academic_researcher,
+    "industry_analyst": industry_analyst,
+    "technical_specialist": technical_specialist,
+    "data_analyst": data_analyst,
+    "synthesis_writer": synthesis_writer,
+    "fact_checker": fact_checker
+}
 ```
 
-### 2.4 Create a DynamoDB Table Named mcp_user_config_table
-```bash
-aws dynamodb create-table \
-    --table-name mcp_user_config_table \
-    --attribute-definitions AttributeName=userId,AttributeType=S \
-    --key-schema AttributeName=userId,KeyType=HASH \
-    --billing-mode PAY_PER_REQUEST 
-```
+- 输入 `帮我写一份关于amazon bedrock agentcore的研究报告，使用中文`
+![alt text](assets/swarm_deepresearch.png)
 
-### 2.5 Starting the Backend Service
+## 6.更多示例
+- [case](./README_cases.md)
+Model: # Agentic AI with Bedrock AgentCore and Strands Agents SDK [English](./README.en.md)
 
-- Start the backend service:
-```bash
-bash start_all.sh
-```
 
-### 2.6 Frontend
-**Prerequisites**
+## 1. Overview
+
+This is a general-purpose Agentic AI application developed based on the Strands Agents SDK, which achieves seamless connection between large language models and external tool systems through MCP integration. Strands SDK serves as the core engine, providing powerful agent capabilities and tool integration mechanisms, making the entire system highly scalable and practical.
+
+### 1.1. System Architecture Diagram
+![system](assets/agentcore_arc.png) 
+  
+The application is divided into two parts: a frontend web and backend services. Both the frontend web and backend services are deployed as containers to Amazon ECS Fargate and provide external access links through ALB load balancing.
+The backend service provides backend services for the WEB end, such as user session creation, model selection settings, MCP tool selection, system prompt settings, etc. The backend service receives requests from the WEB end and sends tasks to Agent Runtime, which then allows the Agent in Runtime to independently decide whether to call browsers, code executors, MCP tools running on MCP Runtime, or more MCP tools exposed through Gateway.
+
+### 1.2 Features
+- **Frontend-Backend Separation** - Both MCP Client and MCP Server can be deployed on the server side, allowing users to interact directly through backend web services using web browsers, thus accessing LLM and MCP Server capabilities and resources
+- **Using AgentCore Core Capabilities** - Integrates Runtime, Gateway, Memory, Browser, Code Interpreter, Identity, Observation
+- **Identity Authentication** - Uses AWS Cognito User Pool service to provide unified user registration, authentication, authorization, as well as backend MCP runtime, Gateway authorization and security
+- **React UI** - React-based user interface that allows users to interact with models and manage MCP servers, display tool call results and reasoning processes
+- **Multi-Model Providers** - Supports Bedrock, OpenAI and compatible models
+- **Multi-User Session Management** - Maintains multi-user sessions
+- **Using Strands Agents SDK** - Provides Single Agent, Swarm Multi-Agents deep research mode
+
+### 1.3 Core Module Descriptions
+
+#### Agent Runtime
+1. Runs Strands Agents. Since runtime is called through backend service, the default IAM method can be directly used for inbound authentication
+2. Uses AgentCore memory to save short-term and long-term memory
+3. Contains 2 python tools for directly using AgentCore's browser and code interpreter
+4. Can independently install MCP servers in runtime
+5. Can connect to MCP runtime or Gateway
+
+#### MCP Runtime
+1. Independently implement or select some local code MCP servers and transform them into MCP runtime
+2. Uses OAuth for inbound identity authentication, using Cognito UserPool as authentication provider
+3. Outbound authentication can use OAuth or API Key Credential Provider methods, for example: using Google Calendar requires OAuth, while EXA search directly uses API Key Credential Provider
+
+#### Gateway 
+1. Implements lambda function as gateway target access, this lambda function implementation scenario: tbd
+2. Implements using OpenApi/Smithy description documents to convert into a gateway target access, this api implementation scenario: tbd
+3. Uses OAuth for inbound identity authentication, using Cognito UserPool as authentication provider
+4. If target is lambda, directly uses IAM for outbound authentication
+5. If target is api, uses API Key Credential Provider for outbound authentication
+
+### Memory
+1. Uses Strands Agent SDK hook functions to monitor AfterInvocationEvent, saving each round of conversation messages as short-term memory
+2. Uses Strands Agent SDK hook functions to monitor AgentInitializedEvent, restoring short-term memory each time Agent is created
+3. Long-term memory retrieval module is made into Agent tool, allowing Agent to independently decide whether to retrieve long-term memory
+
+### Browser 
+1. Passes Browser runtime's CDP protocol to browser use agent, using Browser in the form of agent as tool
+
+### Identity
+Uses Cognito UserPool as unified identity provider, using the same UserPool and client id to provide:
+1. WEB frontend user login authentication
+2. Gateway and MCP runtime OAuth authentication
+
+
+## 2. Installation Method (Requires Arm64 architecture Linux system, such as Mac, or Graviton EC2)
+### 2.1. Dependency Installation
+
+Currently mainstream MCP Servers are developed and implemented based on NodeJS or Python and run on user PCs, so user PCs need to install these dependencies.
+
+### 2.1 NodeJS
+
+NodeJS [download and install](https://nodejs.org/en), this project has been fully tested with version `v22.12.0`.
+
+### 2.2 Python
+
+Some MCP Servers are developed based on Python, so users must install [Python](https://www.python.org/downloads/). Additionally, this project's code is also developed based on Python, requiring environment and dependency installation.
+
+First, install Python package management tool uv, refer to [uv](https://docs.astral.sh/uv/getting-started/installation/) official guide for details
+
+### 2.3 Docker (Skip if available)
 - Install Docker and Docker Compose: https://docs.docker.com/get-docker/
-- Docker installation command for Linux:
+- Docker installation commands for Linux:
 ```bash
 # Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -135,66 +352,187 @@ sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.6/docker
 sudo chmod +x /usr/local/bin/docker-compose
 ln -s /usr/bin/docker-compose  /usr/local/bin/docker-compose
 ```
-1. After cloning the repository
+
+### 2.4 Create Cognito
+After downloading and cloning this project, enter the `agentcore_scripts/` directory and run the script to create IAM role, Cognito UserPool, AgentCore memory.  
 ```bash
-cd demo_mcp_on_amazon_bedrock/react_ui
+cd agentcore_scripts/
+bash run_setup.sh
+```
+After completion, 3 new files will be generated in the `agentcore_scripts/` directory:  
+
+Find the following 2 configurations from the `.env_cognito` file, which will be used in later .env configuration:   
+```
+pool_id=us-west-xxx
+app_client_id=xxxxxx
+m2m_client_id=
+m2m_client_secret=
+scope_string=
+discovery_url=
 ```
 
-2. Create environment variable file
-```bash
-cp .env.example .env.local
+Find the role arn from the `iam-role.txt` file, which will be used in later AgentCore runtime creation:   
+```
+Role ARN: arn:aws:iam::xxxx:role/agentcore-strands_agent_role-role
 ```
 
-3. Build and start services using Docker Compose
-```bash
-docker-compose up -d --build
+Find the memory id from the `memory.txt` file, which will be used in later AgentCore runtime creation:
+```
+✅ Created memory: {memory_id}
 ```
 
-#### Other Useful Docker Commands
+
+### 2.5 Create AgentCore Runtime Configuration
+1. Enter project directory to create Python virtual environment and install dependencies：  
 ```bash
-# View container logs
-docker logs -f mcp-bedrock-ui
-
-# Restart container
-docker-compose restart
-
-# Stop container
-docker-compose down
-
-# Rebuild and start (after code updates)
-docker-compose up -d --build
+cd ./sample_agentic_ai_strands
+uv sync
 ```
 
-## 3. Installation Method (Production Mode, AWS ECS Deployment)
-Please refer to the [CDK Deployment Guide](cdk/README-CDK_en.md)
+2. Copy `bedrock_agentcore_template.yaml` as `.bedrock_agentcore.yaml`,  
+```bash
+cp bedrock_agentcore_template.yaml .bedrock_agentcore.yaml
+```  
+Then modify the account, region information, and execution_role inside, other roles can be obtained from the previous step's `iam-role.txt`.  
+
+### 2.6 Environment Variable Setup
+- Rename env.example to .env, uncomment as needed and modify the following variables:
+- Enter project directory
+```bash
+cp env.example .env
+```
+  
+- Use vim to edit the .env file： 
+- ！！⚠️Note that COGNITO_M2M_CLIENT_SCOPE variable contains spaces and needs to be enclosed in double quotes
+```bash
+# =============================================================================
+# COGNITO AUTHENTICATION CONFIGURATION
+# AWS Cognito UserPool configuration for JWT token authentication
+# =============================================================================
+COGNITO_USER_POOL_ID=<pool_id>
+COGNITO_CLIENT_ID=<app_client_id>
+COGNITO_M2M_CLIENT_ID=<m2m_client_id>
+COGNITO_M2M_CLIENT_SECRET=<m2m_client_secret>
+COGNITO_M2M_CLIENT_SCOPE="<scope_string>"
+# =============================================================================
+# AWS Infra CONFIGURATION
+# The default ECS platform is amd64, you can choose linux/amd64  or  linux/arm64
+# =============================================================================
+PLATFORM=linux/arm64
+AWS_REGION=us-west-2
+# =============================================================================
+# AGENTCORE CONFIGURATION
+# =============================================================================
+AGENTCORE_REGION=us-west-2
+MEMORY_ID=<your_agentcore_memory_id>
+```  
+
+### 2.7 Deploy AgentCore Runtime
+Run AgentCore CLI to deploy runtime (note that it needs to be in ARM environment)
+```bash
+agentcore launch
+```
+After deployment, you will see `Agent ARN` in the console. Please open the .env file again and configure the arn to the following environment variable.
+```bash
+AGENTCORE_RUNTIME_ARN=<your_agentcore_runtime_arn>
+```
+
+
+## 3. Deploy Frontend and Web Backend to ECS
+(Production mode, AWS ECS deployment)
+Please refer to [CDK Deployment Instructions](cdk/README-CDK.md)
 ![img](assets/ecs_fargate_architecture.png)
-This demo's deployment architecture follows AWS best practices, deploying the application in private subnets, providing public access through a load balancer, and using Fargate for serverless container management. The deployment architecture includes the following main AWS components:
+This Demo's deployment architecture follows AWS best practices, deploying applications in private subnets, providing public access through load balancers, and using Fargate for serverless container management. This deployment architecture includes the following main AWS cloud components:
+1. ECS Cluster：
+ • Serverless container environment running on Fargate, using ARM architecture
+ • Frontend service: minimum 2 tasks, auto-scaling based on CPU usage
+ • Backend service: minimum 2 tasks, auto-scaling based on CPU usage
 
-1. ECS Cluster:
-   • Serverless container environment running on Fargate using ARM architecture
-   • Frontend service: Minimum 2 tasks, auto-scaling based on CPU usage
-   • Backend service: Minimum 2 tasks, auto-scaling based on CPU usage
+2. VPC：
+ • Includes public and private subnets across 2 availability zones
+ • Internet Gateway and NAT Gateway in public subnets
+ • Private subnets for running ECS tasks
 
-2. VPC:
-   • Contains public and private subnets spanning 2 availability zones
-   • Internet Gateway and NAT Gateway in public subnets
-   • Private subnets for running ECS tasks
+3. Application Load Balancing：
+ • Application Load Balancer (ALB) distributes traffic
+ • Routes requests with /v1/* and /api/* paths to backend service
+ • Routes other requests to frontend service
 
-3. Application Load Balancer:
-   • Application Load Balancer (ALB) distributes traffic
-   • Routes requests with /v1/* and /api/* paths to the backend service
-   • Routes other requests to the frontend service
+4. Data Storage：
+ • DynamoDB tables for storing user configurations
 
-4. Data Storage:
-   • DynamoDB table for storing user configurations
+5. Security Components：
+ • IAM roles and policies for access control
+ • Secrets Manager generates and stores backend service API KEY configuration information
+ • Security groups control network traffic
 
-5. Security Components:
-   • IAM roles and policies control access permissions
-   • Secrets Manager generates and stores backend service API KEY configuration
-   • Security groups control network traffic
+6. Container Images：
+ • Frontend and backend container images stored in ECR
 
-6. Container Images:
-   • Frontend and backend container images stored in ECR
 
-## 4. More Examples
+## 4. Run AgentCore Locally
+You can run AgentCore locally and start a local 8080 service with the following command. 
+```bash
+uv run src/agentcore_runtime.py
+```
+
+- You can use tools like Postman to make POST calls:
+request url:  
+`http://127.0.0.1:8080/invocations`
+payload as follows： 
+```json
+{
+        "user_id":"a8d153a0-4091-70ee-58ae-b2bd2fa731e6",
+        "request_type":"chatcompletion",
+        "data" :{
+                "model": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+                "mcp_server_ids": [],
+                "extra_params":{"use_mem":false,"use_swarm":false,"use_code_interpreter":false,"use_browser":false},
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "The impact of AI on software development"
+                            }
+                        ]
+                    }
+                ]
+            }
+    }
+```
+## 5. Examples
+### Enable Swarm for Deep Research
+- Install AWS Knowledge MCP server
+![alt text](assets/add_mcp2.png)
+  
+```json
+{
+    "mcpServers": {
+        "aws-knowledge": {
+            "url": "https://knowledge-mcp.global.api.aws"
+        }
+    }
+}
+```
+- Select model `Claude 4 Sonnet` or `Claude 3.7 Sonnet`, adjust `Max Tokens: 30600`
+
+- Enable Swarm mode, in this mode, a Multi-Agents team will be launched for deep research：
+```python
+{
+    "research_coordinator": research_coordinator,
+    "academic_researcher": academic_researcher,
+    "industry_analyst": industry_analyst,
+    "technical_specialist": technical_specialist,
+    "data_analyst": data_analyst,
+    "synthesis_writer": synthesis_writer,
+    "fact_checker": fact_checker
+}
+```
+
+- Input `帮我写一份关于amazon bedrock agentcore的研究报告，使用中文`
+![alt text](assets/swarm_deepresearch.png)
+
+## 6. More Examples
 - [case](./README_cases.md)
