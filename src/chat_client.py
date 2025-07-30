@@ -4,8 +4,8 @@ SPDX-License-Identifier: MIT-0
 """
 import os
 from dotenv import load_dotenv
-from utils import get_user_message,save_user_message,delete_user_message,DDB_TABLE
 from custom_tools.agent_core_memory import AgentCoreMemoryToolProvider
+from strands import Agent
 
 import pandas as pd
 from constant import *
@@ -46,6 +46,9 @@ class ChatClient:
         """clear session message of this client"""
         self.messages = []
         self.system = None
+        # 如果是其他类型的multiagent则直接设置成空
+        if not isinstance(self.agent,Agent):
+            self.agent = None
         if self.memory_provider:
             self.memory_provider.delete_all_events(self.user_id)
     

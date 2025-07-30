@@ -404,6 +404,8 @@ class StrandsAgentClientStream(StrandsAgentClient):
             except queue.Empty:
                 # Yield control to event loop more frequently
                 await asyncio.sleep(0.01)
+                # logger.info("queue empty")
+                yield {"type": "heatbeat","data":{"status":"healthy"}}
                 # Check if we should continue waiting
                 if stream_id in self.stop_flags and self.stop_flags[stream_id]:
                     logger.info(f"Stream {stream_id} timed out and stop flag is set")

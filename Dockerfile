@@ -1,5 +1,5 @@
 # FROM --platform=linux/amd64 public.ecr.aws/docker/library/python:3.13-slim
-FROM --platform=linux/arm64 ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+FROM --platform=linux/arm64 ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 
 WORKDIR /app
@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get install -y nodejs zip \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy entire project (respecting .dockerignore)

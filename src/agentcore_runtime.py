@@ -450,6 +450,8 @@ async def stream_chat_response(data: ChatCompletionRequest, session: UserSession
                     }
                      # 抛出异常
                     raise Exception(response['data'])
+                elif response["type"] == "heatbeat":
+                    yield f": heartbeat\n\n"
 
                 # 发送事件
                 yield f"data: {json.dumps(event_data)}\n\n"
@@ -613,6 +615,7 @@ async def chat_completions(
     session.last_active = datetime.now()
     stream_id = data.stream_id
     async for event in stream_chat_response(data, session, stream_id):
+        await asyncio.sleep(0.001)
         yield event
         # 更新active time
         session.last_active = datetime.now()
