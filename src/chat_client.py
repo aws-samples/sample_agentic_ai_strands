@@ -49,6 +49,8 @@ class ChatClient:
         # 如果是其他类型的multiagent则直接设置成空
         if not isinstance(self.agent,Agent):
             self.agent = None
+        elif self.agent:
+            self.agent.messagas = []
         if self.memory_provider:
             self.memory_provider.delete_all_events(self.user_id)
     

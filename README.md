@@ -120,11 +120,18 @@ cd ./sample_agentic_ai_strands
 uv sync
 ```
 
-2. 将`bedrock_agentcore_template.yaml`复制为`.bedrock_agentcore.yaml`,  
+2. 先运行一下命令创建ECR repo
+```bash
+aws ecr create-repository \
+    --repository-name bedrock_agentcore-agent_runtime \
+    --region us-west-2
+```
+
+3. 将`bedrock_agentcore_template.yaml`复制为`.bedrock_agentcore.yaml`,  
 ```bash
 cp bedrock_agentcore_template.yaml .bedrock_agentcore.yaml
 ```  
-然后将里面的account，region等信息，以及execution_role进行更改，其他role可以从前一步`iam-role.txt`中获取。  
+然后将里面的account，region，ecr_repository等信息，以及execution_role进行更改，其他role可以从前一步`iam-role.txt`中获取。  
 
 ### 2.6 环境变量设置
 - 把env.example 改成.env,根据情况取消注释，修改以下变量：

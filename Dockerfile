@@ -48,6 +48,6 @@ EXPOSE 8080
 # CMD ["python", "-m", "src.agentcore_runtime"]
 # CMD [".venv/bin/opentelemetry-instrument", ".venv/bin/python3", "src/agentcore_runtime.py"]
 # CMD [".venv/bin/python3", "src/agentcore_runtime.py"]
-# CMD ["uv", "run","opentelemetry-instrument", "python", "src/agentcore_runtime.py"]
-CMD ["uv", "run", "src/agentcore_runtime.py"]
+CMD ["uv", "run","opentelemetry-instrument", "python", "src/agentcore_runtime.py"]
+# CMD ["uv", "run", "src/agentcore_runtime.py"]
 

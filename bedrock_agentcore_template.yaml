@@ -9,7 +9,7 @@ agents:
       execution_role: arn:aws:iam::<account_id>:role/agentcore-strands_agent_role-role
       account: '<account_id>'
       region: <region>
-      ecr_repository: 
+      ecr_repository: <erc_repo>
       ecr_auto_create: false
       network_configuration:
         network_mode: PUBLIC

@@ -167,6 +167,8 @@ class StrandsAgentClientStream(StrandsAgentClient):
             
         except Exception as e:
             logger.error(f"Error in agent stream worker for {stream_id}: {e}")
+            import traceback
+            traceback.print_stack()
             stream_queue.put({"type": "error", "data": {"message": str(e)}})
     
     async def   _process_stream_response(self, stream_id: Optional[str], response) -> AsyncIterator[Dict]:
@@ -310,12 +312,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
             yield {"type": "error", "data": {"message": "无stream id"}}
             return
         kwargs = dict(use_swarm=use_swarm)
-        prompt_block = messages[-1]['content']
-        # if use_swarm:
-        #     for block in prompt_block:
-        #         if 'text' in block:
-        #             block['text'] += "\nUse swarm tool to create a team of size 3, coordination_pattern is collaborative to discuss the plan first."
-        
+        prompt_block = messages[-1]['content'] 
         # Start agent thread to handle stream processing
         self._start_agent_thread(stream_id, prompt_block ,**kwargs)
         
@@ -405,7 +402,7 @@ class StrandsAgentClientStream(StrandsAgentClient):
                 # Yield control to event loop more frequently
                 await asyncio.sleep(0.01)
                 # logger.info("queue empty")
-                yield {"type": "heatbeat","data":{"status":"healthy"}}
+                yield {"type": "heartbeat","data":{"status":"healthy"}}
                 # Check if we should continue waiting
                 if stream_id in self.stop_flags and self.stop_flags[stream_id]:
                     logger.info(f"Stream {stream_id} timed out and stop flag is set")
