@@ -3,7 +3,7 @@
 
 ## 1.概述
 
-这是基于Strands Agents SDK开发的通用型Agentic AI应用，通过MCP的集成，实现了大语言模型与外部工具系统的无缝连接。Bedrock AgentCore作为核心引擎,提供了强大的Agent能力和工具集成机制，使得整个系统具备了高度的可扩展性和实用性。
+基于Strands Agents SDK开发的通用型Agentic AI应用，展示了在AgentCore Runtime上，如何与AgentCore Memory, Code Interpreter，Browser，MCP/Gateway的集成，实现了单体Agent，Swarm模式的个人通用助手。Bedrock AgentCore作为核心引擎,提供了强大的Agent能力和工具集成机制，使得整个系统具备了高度的可扩展性和实用性。
 
 ### 1.1.系统架构图
 ![system](assets/agentcore_arc.png) 
