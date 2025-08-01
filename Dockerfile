@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy entire project (respecting .dockerignore)
 COPY . .
+RUN mkdir docs
 # Install uv for faster dependency resolution
 # COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -28,6 +29,7 @@ COPY . .
 # Alternative: Use uv for faster dependency resolution (uncomment if needed)
 # RUN uv pip install --system -r requirements.txt
 RUN uv sync 
+RUN uv pip install git+https://github.com/xiehust/sdk-python.git@dev
 
 # Signal that this is running in Docker for host binding logic
 ENV DOCKER_CONTAINER=1
@@ -45,9 +47,8 @@ ENV DOCKER_CONTAINER=1
 
 EXPOSE 8080
 
-# CMD ["python", "-m", "src.agentcore_runtime"]
 # CMD [".venv/bin/opentelemetry-instrument", ".venv/bin/python3", "src/agentcore_runtime.py"]
-# CMD [".venv/bin/python3", "src/agentcore_runtime.py"]
-CMD ["uv", "run","opentelemetry-instrument", "python", "src/agentcore_runtime.py"]
+CMD [".venv/bin/python3", "src/agentcore_runtime.py"]
+# CMD ["uv", "run","opentelemetry-instrument", "python", "src/agentcore_runtime.py"]
 # CMD ["uv", "run", "src/agentcore_runtime.py"]
 

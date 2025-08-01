@@ -605,7 +605,7 @@ async def chat_completions(
 ):
     mcp_server_ids = data.mcp_server_ids
     # Set session context for telemetry
-    context_token = set_session_context(user_id)
+    # context_token = set_session_context(user_id)
     # user token for agentcore mcp
     user_token = data.token if data.token else ""
     # 获取用户会话
@@ -621,7 +621,7 @@ async def chat_completions(
         session.last_active = datetime.now()
 
      # Detach context when done
-    context.detach(context_token)
+    # context.detach(context_token)
         
 @app.entrypoint
 async def entry(payload:OperationsRequest):
