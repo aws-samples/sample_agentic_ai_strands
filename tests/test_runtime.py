@@ -4,7 +4,7 @@ import json
 import os
 import sys
 sys.path.append('../')
-from agentcore_scripts.utils_bak import get_user_token
+from agentcore_scripts.utils import get_user_token
 # Enable verbose logging for requests
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -19,7 +19,7 @@ print(REGION_NAME)
 BEDROCK_AGENT_CORE_ENDPOINT_URL="https://bedrock-agentcore.us-west-2.amazonaws.com"
 
 # Update the agent ARN. You can get the agent arn from the .bedrock_agentcore.yaml file
-invoke_agent_arn = "arn:aws:bedrock-agentcore:us-west-2:434444145045:runtime/agent_runtime-iBIWWKHPC1"
+invoke_agent_arn = "arn:aws:bedrock-agentcore:us-west-2:434444145045:runtime/agent_runtime-VF0RLdG8eG"
 # URL encode the agent ARN
 escaped_agent_arn = urllib.parse.quote(invoke_agent_arn, safe='')
 print(escaped_agent_arn)

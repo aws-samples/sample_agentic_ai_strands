@@ -16,6 +16,14 @@
 			"model_id": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
 			"model_name": "Claude 3.5 Sonnet v2"
 		},
+	    {
+			"model_id": "openai.gpt-oss-120b-1:0",
+			"model_name": "openai.gpt-oss-120b"
+		},
+		{
+			"model_id": "openai.gpt-oss-20b-1:0",
+			"model_name": "openai.gpt-oss-20b"
+		},
 		{
 			"model_id": "us.amazon.nova-premier-v1:0",
 			"model_name": "Amazon Nova Premier v1"

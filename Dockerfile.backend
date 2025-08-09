@@ -68,7 +68,7 @@ sed -i 's/\(self\._init_future\.result(timeout=\)30/\1120/g' ${PYTHON_SITEPACKAG
 # Copy source code
 COPY src/ ./src/
 COPY conf/ ./conf/
-COPY docs/ ./docs/
+# COPY docs/ ./docs/
 RUN if [ "$USE_CHINA_MIRROR" = "true" ]; then \
     # move to cn
     cp ./conf/config_cn.json ./conf/config.json; \

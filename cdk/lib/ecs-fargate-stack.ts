@@ -8,8 +8,6 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as rds from 'aws-cdk-lib/aws-rds';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as customResources from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 
 export interface EcsFargateStackProps extends cdk.StackProps {
@@ -419,6 +417,14 @@ export class EcsFargateStack extends cdk.Stack {
         'secretsmanager:GetSecretValue',
       ],
       resources: secretsManagerResources,
+    }));
+
+    taskExecutionRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'bedrock-agentcore:*',
+      ],
+      resources: ["*"],
     }));
 
     const taskRole = new iam.Role(this, `${prefix}-task-role`, {

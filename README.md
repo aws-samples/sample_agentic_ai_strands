@@ -62,7 +62,7 @@
 
 ### 2.1 NodeJS
 
-NodeJS [下载安装](https://nodejs.org/en)，本项目已对 `v22.12.0` 版本充分测试。
+NodeJS [下载安装](https://nodejs.org/en/download)，本项目已对 `v22.18.0` 版本充分测试。
 
 ### 2.2 Python
 

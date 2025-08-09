@@ -1,7 +1,10 @@
 #!/bin/bash
 
 set -e
-
+# 读取.env文件
+set -a
+source ../.env
+set +a
 # 配置变量
 REGION="${AWS_REGION:-us-east-2}"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
