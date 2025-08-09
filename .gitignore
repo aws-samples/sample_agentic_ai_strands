@@ -147,7 +147,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
+.bedrock_agentcore.yaml
 # Spyder project settings
 .spyderproject
 .spyproject
