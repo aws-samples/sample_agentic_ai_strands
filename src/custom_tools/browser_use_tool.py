@@ -200,9 +200,9 @@ class BrowserUseTool:
             # viewer = BrowserViewerServer(self.client, port=8000)
             # self.viewer_url = viewer.start(open_browser=False)
             # return f"Browser client initialized, you can visit live session in :<view_url>{self.viewer_url}</view_url>"
-            presigned_url = self.client.generate_live_view_url(expires=900)
-            logger.info(f"Browser client initialized, you can visit live session in :<view_url>{presigned_url}</view_url>")
-            return f"Browser client initialized, you can visit live session in :<view_url>{presigned_url}</view_url>"
+            presigned_url = self.client.generate_live_view_url(expires=300)
+            logger.info(f"Browser client initialized, you can visit live session in :<presigned_url>{presigned_url}</presigned_url>")
+            return f"Browser client initialized, you can visit live session in :<presigned_url>{presigned_url}</presigned_url>"
 
         else:
             return "Browser client has already initialized"

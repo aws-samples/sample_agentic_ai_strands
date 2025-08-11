@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { DCVButtonWrapper } from '@/components/dcv/DCVButton';
 
 interface ToolCall {
   id: string;
@@ -82,6 +83,13 @@ export function ToolCallDisplay({ toolCall, className }: ToolCallDisplayProps) {
       setIsExpanded(true);
     }
   }, [toolCall.status]);
+
+  // Auto-expand result section for browser_init tools to show DCV button immediately
+  useEffect(() => {
+    if (toolCall.name.toLowerCase() === 'browser_init' && toolCall.status === 'completed' && toolCall.result) {
+      setShowResult(true);
+    }
+  }, [toolCall.name, toolCall.status, toolCall.result]);
   
   // Calculate execution time
   const executionTime = toolCall.startTime && toolCall.endTime 
@@ -214,53 +222,62 @@ export function ToolCallDisplay({ toolCall, className }: ToolCallDisplayProps) {
               </button>
               
               {showResult && (
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-2.5 text-sm max-h-80 overflow-auto">
-                  {typeof toolCall.result === 'string' ? (
-                    <ReactMarkdown
-                      className="prose prose-sm max-w-none dark:prose-invert"
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        code(props) {
-                          const { children, className, ...rest } = props;
-                          const match = /language-(\w+)/.exec(className || '');
-                          const isInline = !match;
-                          
-                          return isInline ? (
-                            <code className={className} {...rest}>
-                              {children}
-                            </code>
-                          ) : (
-                            <SyntaxHighlighter
-                              // @ts-ignore - styles typing issue in react-syntax-highlighter
-                              style={oneLight}
-                              language={match?.[1] || 'text'}
-                              PreTag="div"
-                              customStyle={{ fontSize: '11px' } as any}
-                              {...rest}
-                            >
-                              {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
-                          );
-                        }
-                      }}
-                    >
-                      {toolCall.result}
-                    </ReactMarkdown>
-                  ) : (
-                    <SyntaxHighlighter
-                      language="json"
-                      // @ts-ignore - styles typing issue in react-syntax-highlighter
-                      style={oneLight}
-                      customStyle={{
-                        margin: '0',
-                        padding: '0',
-                        background: 'transparent',
-                        fontSize: '11px'
-                      } as any}
-                    >
-                      {JSON.stringify(toolCall.result, null, 2)}
-                    </SyntaxHighlighter>
-                  )}
+                <div className="space-y-3">
+                  {/* DCV Button for browser_init tools */}
+                  <DCVButtonWrapper
+                    toolName={toolCall.name}
+                    toolResult={typeof toolCall.result === 'string' ? toolCall.result : JSON.stringify(toolCall.result)}
+                    className="mb-3"
+                  />
+                  
+                  <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-2.5 text-sm max-h-80 overflow-auto">
+                    {typeof toolCall.result === 'string' ? (
+                      <ReactMarkdown
+                        className="prose prose-sm max-w-none dark:prose-invert"
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code(props) {
+                            const { children, className, ...rest } = props;
+                            const match = /language-(\w+)/.exec(className || '');
+                            const isInline = !match;
+                            
+                            return isInline ? (
+                              <code className={className} {...rest}>
+                                {children}
+                              </code>
+                            ) : (
+                              <SyntaxHighlighter
+                                // @ts-ignore - styles typing issue in react-syntax-highlighter
+                                style={oneLight}
+                                language={match?.[1] || 'text'}
+                                PreTag="div"
+                                customStyle={{ fontSize: '11px' } as any}
+                                {...rest}
+                              >
+                                {String(children).replace(/\n$/, '')}
+                              </SyntaxHighlighter>
+                            );
+                          }
+                        }}
+                      >
+                        {toolCall.result}
+                      </ReactMarkdown>
+                    ) : (
+                      <SyntaxHighlighter
+                        language="json"
+                        // @ts-ignore - styles typing issue in react-syntax-highlighter
+                        style={oneLight}
+                        customStyle={{
+                          margin: '0',
+                          padding: '0',
+                          background: 'transparent',
+                          fontSize: '11px'
+                        } as any}
+                      >
+                        {JSON.stringify(toolCall.result, null, 2)}
+                      </SyntaxHighlighter>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
