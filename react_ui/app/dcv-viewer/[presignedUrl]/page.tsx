@@ -13,7 +13,8 @@ import {
   formatDCVError,
   extractAuthParams,
   DISPLAY_LAYOUTS,
-  getDefaultDisplayLayout
+  getDefaultDisplayLayout,
+  parseBrowserInitResult
 } from '@/lib/dcv/dcv-utils';
 import { DCVDisplayLayout, DCVStatus, DCVError } from '@/lib/dcv/types';
 
@@ -26,6 +27,12 @@ export default function DCVViewerPage() {
   
   // Decode the presigned URL from the route parameter
   const presignedUrl = params?.presignedUrl ? decodeURIComponent(params.presignedUrl as string) : '';
+  
+  // Extract session ID from the presigned URL
+  const extractedSessionId = React.useMemo(() => {
+    const result = parseBrowserInitResult(`<presigned_url>${presignedUrl}</presigned_url>`);
+    return result.sessionId || 'unknown-session';
+  }, [presignedUrl]);
   
   // State management
   const [status, setStatus] = useState<DCVStatus>({
@@ -329,11 +336,9 @@ export default function DCVViewerPage() {
               <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                 AWS DCV Live View
               </h1>
-              {status.sessionId && (
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  Session: {status.sessionId}
-                </span>
-              )}
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                Session: {extractedSessionId}
+              </span>
             </div>
             
             <div className="flex items-center space-x-4">
