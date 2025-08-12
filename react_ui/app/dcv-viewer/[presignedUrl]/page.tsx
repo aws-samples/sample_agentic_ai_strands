@@ -138,14 +138,39 @@ export default function DCVViewerPage() {
     }
   }, [sdkLoaded, presignedUrl, isClient]);
 
-  const connectToSession = async () => {
+  // Helper function to determine if an error should trigger a retry
+  const shouldRetryError = (error: any): boolean => {
+    const errorStr = String(error?.message || error).toLowerCase();
+    // Retry on network errors, timeouts, or connection refused
+    return errorStr.includes('network') || 
+           errorStr.includes('timeout') || 
+           errorStr.includes('refused') ||
+           errorStr.includes('failed to fetch') ||
+           errorStr.includes('connection') ||
+           errorStr.includes('websocket') ||
+           errorStr.includes('authenticate') ||
+           errorStr.includes('invalid') ||
+           errorStr.includes('unavailable');
+  };
+
+  const connectToSession = async (retryCount = 0) => {
     if (!window.dcv || !presignedUrl) {
       addDebugLog('DCV SDK not available or no presigned URL');
       return;
     }
 
+    const maxRetries = 3;
+    const isRetry = retryCount > 0;
+    
     setStatus(prev => ({ ...prev, isConnecting: true, error: undefined }));
-    addDebugLog('Starting DCV authentication...');
+    addDebugLog(`${isRetry ? `Retry ${retryCount}: ` : ''}Starting DCV authentication...`);
+
+    // Add a small delay for retries to allow server/SDK to stabilize
+    if (isRetry) {
+      const delay = 1000 + retryCount * 1000;
+      addDebugLog(`Waiting ${delay}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
 
     try {
       // Create authentication callback
@@ -154,20 +179,29 @@ export default function DCVViewerPage() {
           addDebugLog('DCV requested credentials (unexpected for presigned URL)');
         },
         error: (auth: any, error: any) => {
-          addDebugLog(`DCV auth error: ${formatDCVError(error)}`);
+          const errorMsg = formatDCVError(error);
+          addDebugLog(`DCV auth error (attempt ${retryCount + 1}): ${errorMsg}`);
+          
+          // Retry logic for certain types of errors
+          if (retryCount < maxRetries && shouldRetryError(error)) {
+            addDebugLog(`Will retry connection (${retryCount + 1}/${maxRetries})...`);
+            setTimeout(() => connectToSession(retryCount + 1), 2000);
+            return;
+          }
+          
           setStatus({
             isConnected: false,
             isConnecting: false,
-            error: { code: 'AUTH_ERROR', message: formatDCVError(error) }
+            error: { code: 'AUTH_ERROR', message: errorMsg }
           });
         },
         success: (auth: any, result: any[]) => {
-          addDebugLog('DCV authentication successful');
+          addDebugLog(`DCV authentication successful (attempt ${retryCount + 1})`);
           if (result && result[0]) {
             const { sessionId, authToken } = result[0];
             addDebugLog(`Session ID: ${sessionId}`);
             setStatus(prev => ({ ...prev, sessionId }));
-            connectToSessionWithAuth(sessionId, authToken);
+            connectToSessionWithAuth(sessionId, authToken, retryCount);
           } else {
             addDebugLog('No session data in auth result');
             setStatus({
@@ -184,19 +218,29 @@ export default function DCVViewerPage() {
 
       window.dcv.authenticate(presignedUrl, authCallbacks);
     } catch (error) {
-      addDebugLog(`Authentication failed: ${formatDCVError(error)}`);
+      const errorMsg = formatDCVError(error);
+      addDebugLog(`Authentication failed (attempt ${retryCount + 1}): ${errorMsg}`);
+      
+      // Retry logic for connection errors
+      if (retryCount < maxRetries) {
+        addDebugLog(`Will retry connection (${retryCount + 1}/${maxRetries})...`);
+        setTimeout(() => connectToSession(retryCount + 1), 2000);
+        return;
+      }
+      
       setStatus({
         isConnected: false,
         isConnecting: false,
-        error: { code: 'CONNECTION_ERROR', message: formatDCVError(error) }
+        error: { code: 'CONNECTION_ERROR', message: errorMsg }
       });
     }
   };
 
-  const connectToSessionWithAuth = async (sessionId: string, authToken: string) => {
+  const connectToSessionWithAuth = async (sessionId: string, authToken: string, retryCount = 0) => {
     if (!window.dcv) return;
 
-    addDebugLog(`Connecting to session: ${sessionId}`);
+    const maxRetries = 3;
+    addDebugLog(`Connecting to session: ${sessionId} (attempt ${retryCount + 1})`);
 
     const connectOptions = {
       url: presignedUrl,
@@ -206,7 +250,7 @@ export default function DCVViewerPage() {
       baseUrl: `${window.location.origin}/dcvjs`,
       callbacks: {
         firstFrame: () => {
-          addDebugLog('First frame received - connection established!');
+          addDebugLog(`First frame received - connection established! (attempt ${retryCount + 1})`);
           setStatus({
             isConnected: true,
             isConnecting: false,
@@ -215,11 +259,20 @@ export default function DCVViewerPage() {
           requestDisplayLayout();
         },
         error: (error: any) => {
-          addDebugLog(`Connection error: ${formatDCVError(error)}`);
+          const errorMsg = formatDCVError(error);
+          addDebugLog(`Connection error (attempt ${retryCount + 1}): ${errorMsg}`);
+          
+          // Retry logic for connection errors
+          if (retryCount < maxRetries && shouldRetryError(error)) {
+            addDebugLog(`Will retry session connection (${retryCount + 1}/${maxRetries})...`);
+            setTimeout(() => connectToSessionWithAuth(sessionId, authToken, retryCount + 1), 3000);
+            return;
+          }
+          
           setStatus({
             isConnected: false,
             isConnecting: false,
-            error: { code: 'CONNECTION_ERROR', message: formatDCVError(error) }
+            error: { code: 'CONNECTION_ERROR', message: errorMsg }
           });
         },
         httpExtraSearchParams: () => extractAuthParams(presignedUrl),
@@ -236,13 +289,22 @@ export default function DCVViewerPage() {
     try {
       const connection = await window.dcv.connect(connectOptions);
       dcvConnectionRef.current = connection;
-      addDebugLog('DCV connection object created');
+      addDebugLog(`DCV connection object created (attempt ${retryCount + 1})`);
     } catch (error) {
-      addDebugLog(`Connect failed: ${formatDCVError(error)}`);
+      const errorMsg = formatDCVError(error);
+      addDebugLog(`Connect failed (attempt ${retryCount + 1}): ${errorMsg}`);
+      
+      // Retry logic for connection creation errors
+      if (retryCount < maxRetries && shouldRetryError(error)) {
+        addDebugLog(`Will retry session connection (${retryCount + 1}/${maxRetries})...`);
+        setTimeout(() => connectToSessionWithAuth(sessionId, authToken, retryCount + 1), 3000);
+        return;
+      }
+      
       setStatus({
         isConnected: false,
         isConnecting: false,
-        error: { code: 'CONNECTION_ERROR', message: formatDCVError(error) }
+        error: { code: 'CONNECTION_ERROR', message: errorMsg }
       });
     }
   };
@@ -288,7 +350,7 @@ export default function DCVViewerPage() {
   };
 
   const handleReconnect = () => {
-    addDebugLog('Reconnecting...');
+    addDebugLog('Manual reconnect triggered...');
     setStatus({
       isConnected: false,
       isConnecting: false,
@@ -301,8 +363,8 @@ export default function DCVViewerPage() {
       dcvConnectionRef.current = null;
     }
 
-    // Reconnect
-    setTimeout(() => connectToSession(), 1000);
+    // Reconnect with retry mechanism
+    setTimeout(() => connectToSession(0), 1000);
   };
 
   const getStatusMessage = () => {
@@ -367,7 +429,7 @@ export default function DCVViewerPage() {
               <strong>Connection Error:</strong> {status.error.message}
               <br />
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                Please check your network connection and try again.
+                The system will automatically retry. Please check your network connection.
               </span>
             </AlertDescription>
           </Alert>
@@ -395,7 +457,7 @@ export default function DCVViewerPage() {
                         <Monitor className="h-16 w-16 mx-auto mb-4 opacity-50" />
                         <p className="text-lg mb-2">DCV Session Not Connected</p>
                         <p className="text-sm opacity-75">
-                          {status.error ? 'Connection failed' : 'Waiting for connection...'}
+                          {status.error ? 'Connection failed - will retry automatically' : 'Waiting for connection...'}
                         </p>
                       </div>
                     </div>
@@ -406,7 +468,7 @@ export default function DCVViewerPage() {
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
                         <p className="text-lg mb-2">Connecting to DCV Session</p>
-                        <p className="text-sm opacity-75">Please wait...</p>
+                        <p className="text-sm opacity-75">Please wait... (Auto-retry enabled)</p>
                       </div>
                     </div>
                   )}
