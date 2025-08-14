@@ -84,100 +84,42 @@ export class EcsFargateStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY, // For demo purposes
     });
 
-    // 3. Conditionally import existing Secrets Manager secrets
-    // Use environment variables to control which secrets should exist
-    const useAwsCredentialsSecret = process.env.USE_AWS_CREDENTIALS_SECRET !== 'false';
-    const useBedrockCredentialsSecret = process.env.USE_BEDROCK_CREDENTIALS_SECRET !== 'false';
-    const useStrandsApiKeySecret = process.env.USE_STRANDS_API_KEY_SECRET !== 'false';
-    const useStrandsApiBaseSecret = process.env.USE_STRANDS_API_BASE_SECRET !== 'false';
-    const useLangfuseSecrets = process.env.USE_LANGFUSE_SECRETS !== 'false';
-
-    // Conditionally create secret references
-    let awsCredentialsSecret: secretsmanager.ISecret | undefined;
-    let bedrockAwsCredentialsSecret: secretsmanager.ISecret | undefined;
-    let strandsApiKeySecret: secretsmanager.ISecret | undefined;
-    let strandsApiBaseSecret: secretsmanager.ISecret | undefined;
-    let langfusePublicKeySecret: secretsmanager.ISecret | undefined;
-    let langfuseSecretKeySecret: secretsmanager.ISecret | undefined;
-    let langfuseHostSecret: secretsmanager.ISecret | undefined;
-
-    if (useAwsCredentialsSecret) {
-      try {
-        awsCredentialsSecret = secretsmanager.Secret.fromSecretNameV2(
-          this, `${prefix}-aws-credentials`, `${prefix}/aws-credentials`
-        );
-        cdk.Annotations.of(this).addInfo(`Using AWS credentials secret: ${prefix}/aws-credentials`);
-      } catch (error) {
-        cdk.Annotations.of(this).addWarning(`AWS credentials secret not found: ${prefix}/aws-credentials. Using environment variables instead.`);
-        awsCredentialsSecret = undefined;
-      }
-    } else {
-      cdk.Annotations.of(this).addInfo(`AWS credentials secret disabled. Using environment variables.`);
+    // 3. Import existing Secrets Manager secrets (created by deployment script)
+    let awsCredentialsSecret ;
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY){
+      awsCredentialsSecret= secretsmanager.Secret.fromSecretNameV2(
+        this, `${prefix}-aws-credentials`, `${prefix}/aws-credentials`
+      );
     }
 
-    if (useBedrockCredentialsSecret) {
-      try {
-        bedrockAwsCredentialsSecret = secretsmanager.Secret.fromSecretNameV2(
-          this, `${prefix}-bedrock-aws-credentials`, `${prefix}/bedrock-aws-credentials`
-        );
-        cdk.Annotations.of(this).addInfo(`Using Bedrock credentials secret: ${prefix}/bedrock-aws-credentials`);
-      } catch (error) {
-        cdk.Annotations.of(this).addWarning(`Bedrock credentials secret not found: ${prefix}/bedrock-aws-credentials. Using environment variables instead.`);
-        bedrockAwsCredentialsSecret = undefined;
-      }
-    } else {
-      cdk.Annotations.of(this).addInfo(`Bedrock credentials secret disabled. Using environment variables.`);
+    let  bedrockAwsCredentialsSecret;
+    if (process.env.BEDROCK_AWS_ACCESS_KEY_ID && process.env.BEDROCK_AWS_SECRET_ACCESS_KEY){
+      bedrockAwsCredentialsSecret  = secretsmanager.Secret.fromSecretNameV2(
+        this, `${prefix}-bedrock-aws-credentials`, `${prefix}/bedrock-aws-credentials`
+      );
     }
 
-    if (useStrandsApiKeySecret) {
-      try {
-        strandsApiKeySecret = secretsmanager.Secret.fromSecretNameV2(
-          this, `${prefix}-strands-api-key`, `${prefix}/strands-api-key`
-        );
-        cdk.Annotations.of(this).addInfo(`Using Strands API key secret: ${prefix}/strands-api-key`);
-      } catch (error) {
-        cdk.Annotations.of(this).addWarning(`Strands API key secret not found: ${prefix}/strands-api-key. Using environment variables instead.`);
-        strandsApiKeySecret = undefined;
-      }
-    } else {
-      cdk.Annotations.of(this).addInfo(`Strands API key secret disabled. Using environment variables.`);
-    }
 
-    if (useStrandsApiBaseSecret) {
-      try {
-        strandsApiBaseSecret = secretsmanager.Secret.fromSecretNameV2(
-          this, `${prefix}-strands-api-base`, `${prefix}/strands-api-base`
-        );
-        cdk.Annotations.of(this).addInfo(`Using Strands API base secret: ${prefix}/strands-api-base`);
-      } catch (error) {
-        cdk.Annotations.of(this).addWarning(`Strands API base secret not found: ${prefix}/strands-api-base. Using environment variables instead.`);
-        strandsApiBaseSecret = undefined;
-      }
-    } else {
-      cdk.Annotations.of(this).addInfo(`Strands API base secret disabled. Using environment variables.`);
-    }
 
-    if (useLangfuseSecrets) {
-      try {
-        langfusePublicKeySecret = secretsmanager.Secret.fromSecretNameV2(
-          this, `${prefix}-langfuse-public-key`, `${prefix}/langfuse-public-key`
-        );
-        langfuseSecretKeySecret = secretsmanager.Secret.fromSecretNameV2(
-          this, `${prefix}-langfuse-secret-key`, `${prefix}/langfuse-secret-key`
-        );
-        langfuseHostSecret = secretsmanager.Secret.fromSecretNameV2(
-          this, `${prefix}-langfuse-host`, `${prefix}/langfuse-host`
-        );
-        cdk.Annotations.of(this).addInfo(`Using Langfuse secrets`);
-      } catch (error) {
-        cdk.Annotations.of(this).addWarning(`One or more Langfuse secrets not found. Using environment variables instead.`);
-        langfusePublicKeySecret = undefined;
-        langfuseSecretKeySecret = undefined;
-        langfuseHostSecret = undefined;
-      }
-    } else {
-      cdk.Annotations.of(this).addInfo(`Langfuse secrets disabled. Using environment variables.`);
-    }
+    const strandsApiKeySecret = secretsmanager.Secret.fromSecretNameV2(
+      this, `${prefix}-strands-api-key`, `${prefix}/strands-api-key`
+    );
+
+    const strandsApiBaseSecret = secretsmanager.Secret.fromSecretNameV2(
+      this, `${prefix}-strands-api-base`, `${prefix}/strands-api-base`
+    );
+
+    const langfusePublicKeySecret = secretsmanager.Secret.fromSecretNameV2(
+      this, `${prefix}-langfuse-public-key`, `${prefix}/langfuse-public-key`
+    );
+
+    const langfuseSecretKeySecret = secretsmanager.Secret.fromSecretNameV2(
+      this, `${prefix}-langfuse-secret-key`, `${prefix}/langfuse-secret-key`
+    );
+
+    const langfuseHostSecret = secretsmanager.Secret.fromSecretNameV2(
+      this, `${prefix}-langfuse-host`, `${prefix}/langfuse-host`
+    );
 
     // Create API key secret (this one is generated by CDK)
     // const apiKeySecret = new secretsmanager.Secret(this, `${prefix}-api-key`, {
@@ -459,33 +401,25 @@ export class EcsFargateStack extends cdk.Stack {
       ],
     });
 
-    // Add permissions to access Secrets Manager - only for existing secrets
-    const secretsManagerResources: string[] = [
+    // Add permissions to access Secrets Manager
+    let secretsManagerResources = [
+      strandsApiKeySecret.secretArn,
+      strandsApiBaseSecret.secretArn,
+      langfusePublicKeySecret.secretArn,
+      langfuseSecretKeySecret.secretArn,
+      langfuseHostSecret.secretArn,
       ddbTableNameSecret.secretArn,
     ];
 
-    // Conditionally add secret ARNs only if they exist
-    if (awsCredentialsSecret) {
-      secretsManagerResources.push(awsCredentialsSecret.secretArn);
-    }
-    if (bedrockAwsCredentialsSecret) {
-      secretsManagerResources.push(bedrockAwsCredentialsSecret.secretArn);
-    }
-    if (strandsApiKeySecret) {
-      secretsManagerResources.push(strandsApiKeySecret.secretArn);
-    }
-    if (strandsApiBaseSecret) {
-      secretsManagerResources.push(strandsApiBaseSecret.secretArn);
-    }
-    if (langfusePublicKeySecret) {
-      secretsManagerResources.push(langfusePublicKeySecret.secretArn);
-    }
-    if (langfuseSecretKeySecret) {
-      secretsManagerResources.push(langfuseSecretKeySecret.secretArn);
-    }
-    if (langfuseHostSecret) {
-      secretsManagerResources.push(langfuseHostSecret.secretArn);
-    }
+
+    awsCredentialsSecret&&(
+      secretsManagerResources = [...secretsManagerResources, awsCredentialsSecret.secretArn]
+    )
+
+    bedrockAwsCredentialsSecret&&(
+      secretsManagerResources = [...secretsManagerResources, bedrockAwsCredentialsSecret.secretArn]
+    )
+
 
     // Add Aurora secrets only if Mem0 is enabled
     if (enableMem0 && dbCredentialsSecret && dbConnectionSecret) {
@@ -549,33 +483,22 @@ export class EcsFargateStack extends cdk.Stack {
       resources: ["*"],
     }));
 
-    // Task role secrets manager resources - only for existing secrets
-    const taskRoleSecretsManagerResources: string[] = [
+    let taskRoleSecretsManagerResources = [
+      strandsApiKeySecret.secretArn,
+      strandsApiBaseSecret.secretArn,
+      langfusePublicKeySecret.secretArn,
+      langfuseSecretKeySecret.secretArn,
+      langfuseHostSecret.secretArn,
       ddbTableNameSecret.secretArn,
     ];
 
-    // Conditionally add secret ARNs only if they exist
-    if (awsCredentialsSecret) {
-      taskRoleSecretsManagerResources.push(awsCredentialsSecret.secretArn);
-    }
-    if (bedrockAwsCredentialsSecret) {
-      taskRoleSecretsManagerResources.push(bedrockAwsCredentialsSecret.secretArn);
-    }
-    if (strandsApiKeySecret) {
-      taskRoleSecretsManagerResources.push(strandsApiKeySecret.secretArn);
-    }
-    if (strandsApiBaseSecret) {
-      taskRoleSecretsManagerResources.push(strandsApiBaseSecret.secretArn);
-    }
-    if (langfusePublicKeySecret) {
-      taskRoleSecretsManagerResources.push(langfusePublicKeySecret.secretArn);
-    }
-    if (langfuseSecretKeySecret) {
-      taskRoleSecretsManagerResources.push(langfuseSecretKeySecret.secretArn);
-    }
-    if (langfuseHostSecret) {
-      taskRoleSecretsManagerResources.push(langfuseHostSecret.secretArn);
-    }
+    awsCredentialsSecret&&(
+      taskRoleSecretsManagerResources = [...taskRoleSecretsManagerResources, awsCredentialsSecret.secretArn]
+    )
+
+    bedrockAwsCredentialsSecret&&(
+      taskRoleSecretsManagerResources = [...taskRoleSecretsManagerResources, bedrockAwsCredentialsSecret.secretArn]
+    )
 
     // Add Aurora secrets only if Mem0 is enabled
     if (enableMem0 && dbCredentialsSecret && dbConnectionSecret) {
@@ -694,33 +617,9 @@ export class EcsFargateStack extends cdk.Stack {
       MCP_SERVICE_PORT: '7002',
       USE_HTTPS: '0',
       ddb_table: userConfigTable.tableName,
-      // Langfuse settings - only set environment variables if secrets don't exist
-      ...(langfuseHostSecret ? {} : {
-        LANGFUSE_HOST: process.env.LANGFUSE_HOST || '',
-      }),
-      ...(langfusePublicKeySecret ? {} : {
-        LANGFUSE_PUBLIC_KEY: process.env.LANGFUSE_PUBLIC_KEY || '',
-      }),
-      ...(langfuseSecretKeySecret ? {} : {
-        LANGFUSE_SECRET_KEY: process.env.LANGFUSE_SECRET_KEY || '',
-      }),
-      // Add fallback environment variables for AWS credentials
-      ...(awsCredentialsSecret ? {} : {
-        AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || '',
-        AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || '',
-      }),
-      // Add fallback environment variables for Bedrock credentials
-      ...(bedrockAwsCredentialsSecret ? {} : {
-        BEDROCK_AWS_ACCESS_KEY_ID: process.env.BEDROCK_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '',
-        BEDROCK_AWS_SECRET_ACCESS_KEY: process.env.BEDROCK_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '',
-      }),
-      // Add fallback environment variables for Strands API
-      ...(strandsApiKeySecret ? {} : {
-        OPENAI_API_KEY: process.env.STRANDS_API_KEY || process.env.OPENAI_API_KEY || '',
-      }),
-      ...(strandsApiBaseSecret ? {} : {
-        OPENAI_BASE_URL: process.env.STRANDS_API_BASE || process.env.OPENAI_BASE_URL || '',
-      }),
+      LANGFUSE_HOST: process.env.LANGFUSE_HOST||'',
+      LANGFUSE_PUBLIC_KEY: process.env.LANGFUSE_PUBLIC_KEY || "",
+      LANGFUSE_SECRET_KEY: process.env.LANGFUSE_SECRET_KEY || "",
       BYPASS_TOOL_CONSENT: 'true',
       BEDROCK_AWS_REGION:process.env.BEDROCK_AWS_REGION || process.env.AWS_REGION || "",
       LLM_MODEL: process.env.LLM_MODEL||"Qwen/Qwen3-14B",
@@ -740,35 +639,25 @@ export class EcsFargateStack extends cdk.Stack {
       backendEnvironment.DB_NAME = 'mcpapp';
     }
 
-    // Prepare backend container secrets - only add existing secrets
-    const backendSecrets: { [key: string]: ecs.Secret } = {};
+    // Prepare backend container secrets
+    let backendSecrets: { [key: string]: ecs.Secret } = {
 
-    // Conditionally add secrets only if they exist
-    if (awsCredentialsSecret) {
-      backendSecrets.AWS_ACCESS_KEY_ID = ecs.Secret.fromSecretsManager(awsCredentialsSecret, 'AccessKeyId');
-      backendSecrets.AWS_SECRET_ACCESS_KEY = ecs.Secret.fromSecretsManager(awsCredentialsSecret, 'SecretAccessKey');
-    }
-    if (bedrockAwsCredentialsSecret) {
-      backendSecrets.BEDROCK_AWS_ACCESS_KEY_ID = ecs.Secret.fromSecretsManager(bedrockAwsCredentialsSecret, 'AccessKeyId');
-      backendSecrets.BEDROCK_AWS_SECRET_ACCESS_KEY = ecs.Secret.fromSecretsManager(bedrockAwsCredentialsSecret, 'SecretAccessKey');
-    }
-    if (strandsApiKeySecret) {
-      backendSecrets.OPENAI_API_KEY = ecs.Secret.fromSecretsManager(strandsApiKeySecret);
-    }
-    if (strandsApiBaseSecret) {
-      backendSecrets.OPENAI_BASE_URL = ecs.Secret.fromSecretsManager(strandsApiBaseSecret);
-    }
-
-    // Add Langfuse secrets if they exist
-    if (langfusePublicKeySecret) {
-      backendSecrets.LANGFUSE_PUBLIC_KEY = ecs.Secret.fromSecretsManager(langfusePublicKeySecret);
-    }
-    if (langfuseSecretKeySecret) {
-      backendSecrets.LANGFUSE_SECRET_KEY = ecs.Secret.fromSecretsManager(langfuseSecretKeySecret);
-    }
-    if (langfuseHostSecret) {
-      backendSecrets.LANGFUSE_HOST = ecs.Secret.fromSecretsManager(langfuseHostSecret);
-    }
+      OPENAI_API_KEY: ecs.Secret.fromSecretsManager(strandsApiKeySecret),
+      OPENAI_BASE_URL: ecs.Secret.fromSecretsManager(strandsApiBaseSecret),
+    };
+    awsCredentialsSecret && (
+      backendSecrets = {...backendSecrets,
+        AWS_ACCESS_KEY_ID: ecs.Secret.fromSecretsManager(awsCredentialsSecret, 'AccessKeyId'),
+        AWS_SECRET_ACCESS_KEY: ecs.Secret.fromSecretsManager(awsCredentialsSecret, 'SecretAccessKey'),
+      }
+    )
+    
+    bedrockAwsCredentialsSecret && (
+      backendSecrets = {...backendSecrets,
+        BEDROCK_AWS_ACCESS_KEY_ID: ecs.Secret.fromSecretsManager(bedrockAwsCredentialsSecret, 'AccessKeyId'),
+        BEDROCK_AWS_SECRET_ACCESS_KEY:  ecs.Secret.fromSecretsManager(bedrockAwsCredentialsSecret, 'SecretAccessKey'),
+      }
+    )
 
     // Add Aurora-specific secrets only if Mem0 is enabled
     if (enableMem0 && dbCredentialsSecret) {
@@ -895,36 +784,6 @@ export class EcsFargateStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'SecretsManagerPrefix', {
       value: `${prefix}/`,
       description: 'Secrets Manager secrets prefix',
-    });
-
-    // Output information about secret configuration
-    new cdk.CfnOutput(this, 'SecretsConfiguration', {
-      value: JSON.stringify({
-        awsCredentials: awsCredentialsSecret ? 'secret' : 'environment',
-        bedrockCredentials: bedrockAwsCredentialsSecret ? 'secret' : 'environment',
-        strandsApiKey: strandsApiKeySecret ? 'secret' : 'environment',
-        strandsApiBase: strandsApiBaseSecret ? 'secret' : 'environment',
-        langfuseSecrets: (langfusePublicKeySecret && langfuseSecretKeySecret && langfuseHostSecret) ? 'secret' : 'environment',
-      }),
-      description: 'Configuration source for each credential type (secret or environment)',
-    });
-
-    new cdk.CfnOutput(this, 'EnvironmentVariablesFallback', {
-      value: JSON.stringify({
-        message: 'If secrets are not used, set these environment variables during deployment',
-        variables: [
-          'AWS_ACCESS_KEY_ID',
-          'AWS_SECRET_ACCESS_KEY',
-          'BEDROCK_AWS_ACCESS_KEY_ID',
-          'BEDROCK_AWS_SECRET_ACCESS_KEY',
-          'STRANDS_API_KEY',
-          'STRANDS_API_BASE',
-          'LANGFUSE_PUBLIC_KEY',
-          'LANGFUSE_SECRET_KEY',
-          'LANGFUSE_HOST'
-        ]
-      }),
-      description: 'Environment variables to set if not using SecretsManager',
     });
     // Mem0 Aurora-specific outputs (conditional)
     if (enableMem0 && auroraCluster) {
