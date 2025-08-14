@@ -694,10 +694,16 @@ export class EcsFargateStack extends cdk.Stack {
       MCP_SERVICE_PORT: '7002',
       USE_HTTPS: '0',
       ddb_table: userConfigTable.tableName,
-      // Langfuse settings - fallback to environment variables if secrets don't exist
-      LANGFUSE_HOST: process.env.LANGFUSE_HOST || '',
-      LANGFUSE_PUBLIC_KEY: langfusePublicKeySecret ? '' : (process.env.LANGFUSE_PUBLIC_KEY || ''),
-      LANGFUSE_SECRET_KEY: langfuseSecretKeySecret ? '' : (process.env.LANGFUSE_SECRET_KEY || ''),
+      // Langfuse settings - only set environment variables if secrets don't exist
+      ...(langfuseHostSecret ? {} : {
+        LANGFUSE_HOST: process.env.LANGFUSE_HOST || '',
+      }),
+      ...(langfusePublicKeySecret ? {} : {
+        LANGFUSE_PUBLIC_KEY: process.env.LANGFUSE_PUBLIC_KEY || '',
+      }),
+      ...(langfuseSecretKeySecret ? {} : {
+        LANGFUSE_SECRET_KEY: process.env.LANGFUSE_SECRET_KEY || '',
+      }),
       // Add fallback environment variables for AWS credentials
       ...(awsCredentialsSecret ? {} : {
         AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || '',
