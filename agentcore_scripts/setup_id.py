@@ -21,6 +21,6 @@ if __name__ == '__main__':
         f.write(f"COGNITO_CLIENT_ID={app_client_id}\n")
         f.write(f"COGNITO_M2M_CLIENT_ID={m2m_client_id}\n")
         f.write(f"COGNITO_M2M_CLIENT_SECRET={m2m_client_secret}\n")
-        f.write(f"COGNITO_M2M_CLIENT_SCOPE={scope_string}\n")
+        f.write(f"COGNITO_M2M_CLIENT_SCOPE=\"{scope_string}\"\n")
         f.write(f"discovery_url={discovery_url}\n")
     print("Cognito config saved to .env_setup")

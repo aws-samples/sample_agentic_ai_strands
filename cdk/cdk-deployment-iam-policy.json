@@ -35,7 +35,8 @@
           "Resource": [
               "arn:aws:ecr:*:*:repository/strands-agentcore-*",
               "arn:aws:ecr:*:*:repository/strands-mcp-app-*",
-              "arn:aws:ecr:*:*:repository/cdk-*"
+              "arn:aws:ecr:*:*:repository/cdk-*",
+              "arn:aws:ecr:*:*:repository/bedrock_agentcore-agent_runtime"
           ]
       },
       {
@@ -298,6 +299,16 @@
           "Resource": "*"
       },
       {
+        "Sid": "CognitoUserPoolPermissions",
+        "Effect": "Allow",
+        "Action": [
+            "cognito-idp:*"
+        ],
+        "Resource": [
+            "arn:aws:cognito-idp:*:*:userpool/*"
+        ]
+      },
+      {
           "Sid": "IAMRolePermissions",
           "Effect": "Allow",
           "Action": [
@@ -318,7 +329,8 @@
           ],
           "Resource": [
               "arn:aws:iam::*:role/StrandsAgentsEcsFargateStack-*",
-              "arn:aws:iam::*:role/cdk-*"
+              "arn:aws:iam::*:role/cdk-*",
+              "arn:aws:iam::*:role/agentcore-strands_agent_role*"
           ]
       },
       {
@@ -333,7 +345,9 @@
           ],
           "Resource": [
               "arn:aws:iam::*:instance-profile/StrandsAgentsEcsFargateStack-*",
-              "arn:aws:iam::*:instance-profile/cdk-*"
+              "arn:aws:iam::*:instance-profile/cdk-*",
+              "arn:aws:iam::*:instance-profile/agentcore-strands_agent_role*"
+
           ]
       },
       {

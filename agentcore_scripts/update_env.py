@@ -43,12 +43,12 @@ def parse_env_file(file_path: str) -> Dict[str, str]:
                     value = match.group(2)
                     
                     # Remove quotes from value if present
-                    if value.startswith('"') and value.endswith('"'):
-                        value = value[1:-1]
-                    elif value.startswith("'") and value.endswith("'"):
-                        value = value[1:-1]
+                    # if value.startswith('"') and value.endswith('"'):
+                    #     value = value[1:-1]
+                    # elif value.startswith("'") and value.endswith("'"):
+                    #     value = value[1:-1]
                     
-                    env_vars[key] = value
+                    env_vars[key] = value #f"\"{value}\"" if key == 'COGNITO_M2M_CLIENT_SCOPE' else value
                 else:
                     print(f"Warning: Line {line_num} has incorrect format: {line}")
     
