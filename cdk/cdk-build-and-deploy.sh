@@ -246,27 +246,31 @@ echo "========================================="
 echo "从 .env 文件更新 Secrets Manager..."
 
 # 创建或更新 AWS 凭证
-aws secretsmanager create-secret \
-    --name "${PREFIX}/aws-credentials" \
-    --description "AWS Access Credentials" \
-    --secret-string "{\"AccessKeyId\":\"${AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${AWS_SECRET_ACCESS_KEY}\"}" \
-    --region $REGION 2>/dev/null || \
-aws secretsmanager update-secret \
-    --secret-id "${PREFIX}/aws-credentials" \
-    --secret-string "{\"AccessKeyId\":\"${AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${AWS_SECRET_ACCESS_KEY}\"}" \
-    --region $REGION
-
+if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+    echo "使用环境变量中的 AWS 凭证"
+    aws secretsmanager create-secret \
+        --name "${PREFIX}/aws-credentials" \
+        --description "AWS Access Credentials" \
+        --secret-string "{\"AccessKeyId\":\"${AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${AWS_SECRET_ACCESS_KEY}\"}" \
+        --region $REGION 2>/dev/null || \
+    aws secretsmanager update-secret \
+        --secret-id "${PREFIX}/aws-credentials" \
+        --secret-string "{\"AccessKeyId\":\"${AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${AWS_SECRET_ACCESS_KEY}\"}" \
+        --region $REGION
+fi
 # 创建或者更新 Bedrock AWS 凭证
 # 创建或更新 AWS 凭证
-aws secretsmanager create-secret \
-    --name "${PREFIX}/bedrock-aws-credentials" \
-    --description "Bedrock AWS Access Credentials" \
-    --secret-string "{\"AccessKeyId\":\"${BEDROCK_AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${BEDROCK_AWS_SECRET_ACCESS_KEY}\"}" \
-    --region $REGION 2>/dev/null || \
-aws secretsmanager update-secret \
-    --secret-id "${PREFIX}/bedrock-aws-credentials" \
-    --secret-string "{\"AccessKeyId\":\"${BEDROCK_AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${BEDROCK_AWS_SECRET_ACCESS_KEY}\"}" \
-    --region $REGION
+if [ -n "$BEDROCK_AWS_ACCESS_KEY_ID" ] && [ -n "$BEDROCK_AWS_SECRET_ACCESS_KEY" ]; then
+    aws secretsmanager create-secret \
+        --name "${PREFIX}/bedrock-aws-credentials" \
+        --description "Bedrock AWS Access Credentials" \
+        --secret-string "{\"AccessKeyId\":\"${BEDROCK_AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${BEDROCK_AWS_SECRET_ACCESS_KEY}\"}" \
+        --region $REGION 2>/dev/null || \
+    aws secretsmanager update-secret \
+        --secret-id "${PREFIX}/bedrock-aws-credentials" \
+        --secret-string "{\"AccessKeyId\":\"${BEDROCK_AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${BEDROCK_AWS_SECRET_ACCESS_KEY}\"}" \
+        --region $REGION
+fi
 
 if [ -z "$OPENAI_API_KEY" ]; then
     echo "⚠️ OPENAI_API_KEY 未设置或为空"

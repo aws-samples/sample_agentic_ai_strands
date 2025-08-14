@@ -132,14 +132,6 @@ cp bedrock_agentcore_template.yaml .bedrock_agentcore.yaml
 ```
 Update account, region, ECR repository information, and execution role. Use role information from `iam-role.txt`.
 
-4. Create a DynamoDB table named `agent_user_config_table`:
-```bash
-aws dynamodb create-table \
-    --table-name agent_user_config_table \
-    --attribute-definitions AttributeName=userId,AttributeType=S \
-    --key-schema AttributeName=userId,KeyType=HASH \
-    --billing-mode PAY_PER_REQUEST 
-```
 
 ### 2.6 Environment Variables
 Copy the example environment file and edit as needed:
@@ -175,7 +167,7 @@ MEMORY_ID=<your_agentcore_memory_id>
 ### 2.7 Deploying AgentCore Runtime
 Launch the AgentCore runtime using the CLI (requires ARM environment):
 ```bash
-agentcore launch
+uv run agentcore launch
 ```
 
 After successful deployment, note the `Agent ARN` from the console output and add it to your `.env` file:
@@ -216,7 +208,17 @@ This demo follows AWS best practices by deploying applications in private subnet
    - Frontend and backend container images stored in ECR
 
 ## 4. Running AgentCore Locally
-Launch AgentCore locally with an 8080 service using:
+
+- Create a DynamoDB table named `agent_user_config_table`:
+```bash
+aws dynamodb create-table \
+    --table-name agent_user_config_table \
+    --attribute-definitions AttributeName=userId,AttributeType=S \
+    --key-schema AttributeName=userId,KeyType=HASH \
+    --billing-mode PAY_PER_REQUEST 
+```
+
+- Launch AgentCore locally with an 8080 service using:
 ```bash
 uv run src/agentcore_runtime.py
 ```

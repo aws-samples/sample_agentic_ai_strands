@@ -133,14 +133,6 @@ cp bedrock_agentcore_template.yaml .bedrock_agentcore.yaml
 ```  
 然后将里面的account，region，ecr_repository等信息，以及execution_role进行更改，其他role可以从前一步`iam-role.txt`中获取。  
 
-4. 创建一个dynamodb table, 名称为agent_user_config_table
-```bash
-aws dynamodb create-table \
-    --table-name agent_user_config_table \
-    --attribute-definitions AttributeName=userId,AttributeType=S \
-    --key-schema AttributeName=userId,KeyType=HASH \
-    --billing-mode PAY_PER_REQUEST 
-```
 ### 2.6 环境变量设置
 - 把env.example 改成.env,根据情况取消注释，修改以下变量：
 - 进入项目目录
@@ -176,7 +168,7 @@ MEMORY_ID=<your_agentcore_memory_id>
 ### 2.7 部署AgentCore Runtime
 运行agentcore cli部署runtime（注意需要在arm环境中）
 ```bash
-agentcore launch
+uv run agentcore launch
 ```
 部署完成后，在控制台会看到 `Agent ARN`，请再次打开.env文件，把arn配置到以下环境变量中。
 ```bash
@@ -217,7 +209,16 @@ AGENTCORE_RUNTIME_ARN=<your_agentcore_runtime_arn>
 
 
 ## 4. 本地运行agentcore
-可以通过以下命令在本地运行agentcore，并启动一个本地8080服务。 
+- 创建一个dynamodb table, 名称为agent_user_config_table
+```bash
+aws dynamodb create-table \
+    --table-name agent_user_config_table \
+    --attribute-definitions AttributeName=userId,AttributeType=S \
+    --key-schema AttributeName=userId,KeyType=HASH \
+    --billing-mode PAY_PER_REQUEST 
+```
+
+- 可以通过以下命令在本地运行agentcore，并启动一个本地8080服务。 
 ```bash
 uv run src/agentcore_runtime.py
 ```
