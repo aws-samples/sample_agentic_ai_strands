@@ -36,7 +36,7 @@
               "arn:aws:ecr:*:*:repository/strands-agentcore-*",
               "arn:aws:ecr:*:*:repository/strands-mcp-app-*",
               "arn:aws:ecr:*:*:repository/cdk-*",
-              "arn:aws:ecr:*:*:repository/bedrock_agentcore-agent_runtime"
+              "arn:aws:ecr:*:*:repository/bedrock-agentcore-*"
           ]
       },
       {
@@ -90,6 +90,14 @@
           "Resource": "*"
       },
       {
+        "Sid": "CodeBuildPermissions",
+        "Effect": "Allow",
+        "Action": [
+            "codebuild:*"
+        ],
+        "Resource": "arn:aws:codebuild:*:*:project/bedrock-agentcore*"
+    },
+      {
           "Sid": "CDKBootstrapPermissions",
           "Effect": "Allow",
           "Action": [
@@ -122,7 +130,8 @@
           ],
           "Resource": [
               "arn:aws:s3:::cdk-*",
-              "arn:aws:s3:::cdk-*/*"
+              "arn:aws:s3:::cdk-*/*",
+              "arn:aws:s3:::bedrock-agentcore-codebuild-sources-*"
           ]
       },
       {
@@ -358,20 +367,9 @@
           ],
           "Resource": [
               "arn:aws:iam::*:role/StrandsAgentsEcsFargateStack-*",
-              "arn:aws:iam::*:role/cdk-*"
-          ],
-          "Condition": {
-              "StringEquals": {
-                  "iam:PassedToService": [
-                      "ecs-tasks.amazonaws.com",
-                      "ecs-tasks.amazonaws.com.cn",
-                      "lambda.amazonaws.com",
-                      "lambda.amazonaws.com.cn",
-                      "cloudformation.amazonaws.com",
-                      "cloudformation.amazonaws.com.cn"
-                  ]
-              }
-          }
+              "arn:aws:iam::*:role/cdk-*",
+              "arn:aws:iam::*:role/AmazonBedrockAgentCoreSDKCodeBuild*"
+          ]
       },
       {
           "Sid": "CloudWatchLogsPermissions",

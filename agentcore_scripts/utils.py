@@ -665,11 +665,14 @@ def setup_cognito_user_pool_with_signup(pool_name = "StrandDemoPoolWithSignup" )
 
 
 def create_agentcore_role(agent_name):
+    print(f"🔍 DEBUG: Starting create_agentcore_role for agent: {agent_name}")
     iam_client = boto3.client('iam')
     agentcore_role_name = f'agentcore-{agent_name}-role'
     boto_session = Session()
     region = boto_session.region_name
     account_id = boto3.client("sts").get_caller_identity()["Account"]
+    print(f"🔍 DEBUG: Role name will be: {agentcore_role_name}")
+    print(f"🔍 DEBUG: Region: {region}, Account: {account_id}")
     role_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -808,49 +811,95 @@ def create_agentcore_role(agent_name):
         assume_role_policy_document
     )
     role_policy_document = json.dumps(role_policy)
+    print(f"🔍 DEBUG: Policy document length: {len(role_policy_document)} characters")
+    
     # Create IAM Role for the Lambda function
+    role_created = False
     try:
+        print(f"🔍 DEBUG: Attempting to create role: {agentcore_role_name}")
         agentcore_iam_role = iam_client.create_role(
             RoleName=agentcore_role_name,
             AssumeRolePolicyDocument=assume_role_policy_document_json
         )
+        print(f"✅ DEBUG: Successfully created new role: {agentcore_role_name}")
+        role_created = True
 
         # Pause to make sure role is created
+        print("🔍 DEBUG: Waiting 10 seconds for role propagation...")
         time.sleep(10)
     except iam_client.exceptions.EntityAlreadyExistsException:
-        print("Role already exists -- returning existing role")
+        print(f"⚠️ DEBUG: Role already exists: {agentcore_role_name}")
+        print("🔍 DEBUG: CRITICAL - Previous version would return here WITHOUT attaching policies!")
         agentcore_iam_role = iam_client.get_role(
             RoleName=agentcore_role_name
         )
-        return agentcore_iam_role
+        print(f"🔍 DEBUG: Retrieved existing role: {agentcore_iam_role['Role']['Arn']}")
+        # DON'T RETURN - Continue to attach policies!
 
     # Attach the inline policy
-    print(f"attaching role policy {agentcore_role_name}")
+    print(f"🔍 DEBUG: Starting policy attachment for {agentcore_role_name}")
+    
+    # Check existing inline policies first
+    try:
+        existing_policies = iam_client.list_role_policies(RoleName=agentcore_role_name)
+        print(f"🔍 DEBUG: Existing inline policies: {existing_policies.get('PolicyNames', [])}")
+    except Exception as e:
+        print(f"⚠️ DEBUG: Could not list existing policies: {e}")
+    
+    print(f"🔍 DEBUG: Attaching inline policy 'AgentCorePolicy' to {agentcore_role_name}")
     try:
         iam_client.put_role_policy(
             PolicyDocument=role_policy_document,
             PolicyName="AgentCorePolicy",
             RoleName=agentcore_role_name
         )
+        print(f"✅ DEBUG: Successfully attached inline policy 'AgentCorePolicy'")
     except Exception as e:
-        print(e)
+        print(f"❌ DEBUG: FAILED to attach inline policy: {type(e).__name__}: {e}")
+        print(f"🔍 DEBUG: Policy document preview: {role_policy_document[:200]}...")
+
+    # Check existing managed policies first
+    try:
+        existing_managed = iam_client.list_attached_role_policies(RoleName=agentcore_role_name)
+        print(f"🔍 DEBUG: Existing managed policies: {[p['PolicyName'] for p in existing_managed.get('AttachedPolicies', [])]}")
+    except Exception as e:
+        print(f"⚠️ DEBUG: Could not list existing managed policies: {e}")
 
     # Attach the AWS managed policy for Bedrock AgentCore Memory
-    print(f"attaching AWS managed policy for Bedrock AgentCore Memory to {agentcore_role_name}")
+    memory_policy_arn = "arn:aws:iam::aws:policy/AmazonBedrockAgentCoreMemoryBedrockModelInferenceExecutionRolePolicy"
+    print(f"🔍 DEBUG: Attaching managed policy: {memory_policy_arn}")
     try:
         iam_client.attach_role_policy(
             RoleName=agentcore_role_name,
-            PolicyArn="arn:aws:iam::aws:policy/AmazonBedrockAgentCoreMemoryBedrockModelInferenceExecutionRolePolicy"
+            PolicyArn=memory_policy_arn
         )
+        print(f"✅ DEBUG: Successfully attached memory policy")
     except Exception as e:
-        print(f"Error attaching managed policy: {e}")
+        print(f"❌ DEBUG: FAILED to attach memory policy: {type(e).__name__}: {e}")
         
-    print(f"attaching AWS managed policy for Bedrock AgentCore Full Access to {agentcore_role_name}")
+    # Attach the AWS managed policy for Bedrock AgentCore Full Access
+    full_access_policy_arn = "arn:aws:iam::aws:policy/BedrockAgentCoreFullAccess"
+    print(f"🔍 DEBUG: Attaching managed policy: {full_access_policy_arn}")
     try:
         iam_client.attach_role_policy(
             RoleName=agentcore_role_name,
-            PolicyArn="arn:aws:iam::aws:policy/BedrockAgentCoreFullAccess"
+            PolicyArn=full_access_policy_arn
         )
+        print(f"✅ DEBUG: Successfully attached full access policy")
     except Exception as e:
-        print(f"Error attaching managed policy: {e}")
+        print(f"❌ DEBUG: FAILED to attach full access policy: {type(e).__name__}: {e}")
+    
+    # Attach the AWS managed policy for ElasticBeanstalk Administrator Access
+    eb_admin_policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess-AWSElasticBeanstalk"
+    print(f"🔍 DEBUG: Attaching managed policy: {eb_admin_policy_arn}")
+    try:
+        iam_client.attach_role_policy(
+            RoleName=agentcore_role_name,
+            PolicyArn=eb_admin_policy_arn
+        )
+        print(f"✅ DEBUG: Successfully attached ElasticBeanstalk admin policy")
+    except Exception as e:
+        print(f"❌ DEBUG: FAILED to attach ElasticBeanstalk admin policy: {type(e).__name__}: {e}")
+    
+    print(f"🔍 DEBUG: create_agentcore_role completed for {agentcore_role_name}")
     return agentcore_iam_role
