@@ -167,7 +167,7 @@ MEMORY_ID=<your_agentcore_memory_id>
 ### 2.7 Deploying AgentCore Runtime
 Launch the AgentCore runtime using the CLI (requires ARM environment):
 ```bash
-uv run agentcore launch
+agentcore launch
 ```
 
 After successful deployment, note the `Agent ARN` from the console output and add it to your `.env` file:

@@ -168,7 +168,7 @@ MEMORY_ID=<your_agentcore_memory_id>
 ### 2.7 部署AgentCore Runtime
 运行agentcore cli部署runtime（注意需要在arm环境中）
 ```bash
-uv run agentcore launch
+agentcore launch
 ```
 部署完成后，在控制台会看到 `Agent ARN`，请再次打开.env文件，把arn配置到以下环境变量中。
 ```bash
