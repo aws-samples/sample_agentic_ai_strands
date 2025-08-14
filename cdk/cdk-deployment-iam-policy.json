@@ -211,7 +211,8 @@
               "ecs:ListServices",
               "ecs:TagResource",
               "ecs:UntagResource",
-              "ecs:ListTagsForResource"
+              "ecs:ListTagsForResource",
+              "ecs:ListServices"
           ],
           "Resource": [
               "arn:aws:ecs:*:*:service/strands-agentcore-*/strands-agentcore-*",

@@ -149,7 +149,7 @@ def setup_memclient():
     # Initialize Memory Client
     client = MemoryClient(region_name=region)
     memory_name = "AgentMemory"
-
+    memory_id = ''
     # Define memory strategies for customer support
     strategies = [
         {
@@ -178,12 +178,14 @@ def setup_memclient():
         )
         memory_id = memory['id']
         print(f"✅ Created memory: {memory_id}")
+        return memory_id
     except ClientError as e:
         if e.response['Error']['Code'] == 'ValidationException' and "already exists" in str(e):
             # If memory already exists, retrieve its ID
             memories = client.list_memories()
             memory_id = next((m['id'] for m in memories if m['id'].startswith(memory_name)), None)
             print(f"Memory already exists. Using existing memory ID: {memory_id}")
+            return memory_id
     except Exception as e:
         # Handle any errors during memory creation
         print(f"❌ ERROR: {e}")
@@ -196,6 +198,7 @@ def setup_memclient():
                 print(f"Cleaned up memory: {memory_id}")
             except Exception as cleanup_error:
                 print(f"Failed to clean up memory: {cleanup_error}")
+    return memory_id
             
             
 def get_user_token(client_id):
@@ -815,28 +818,13 @@ def create_agentcore_role(agent_name):
         # Pause to make sure role is created
         time.sleep(10)
     except iam_client.exceptions.EntityAlreadyExistsException:
-        print("Role already exists -- deleting and creating it again")
-        policies = iam_client.list_role_policies(
-            RoleName=agentcore_role_name,
-            MaxItems=100
-        )
-        print("policies:", policies)
-        for policy_name in policies['PolicyNames']:
-            iam_client.delete_role_policy(
-                RoleName=agentcore_role_name,
-                PolicyName=policy_name
-            )
-        print(f"deleting {agentcore_role_name}")
-        iam_client.delete_role(
+        print("Role already exists -- returning existing role")
+        agentcore_iam_role = iam_client.get_role(
             RoleName=agentcore_role_name
         )
-        print(f"recreating {agentcore_role_name}")
-        agentcore_iam_role = iam_client.create_role(
-            RoleName=agentcore_role_name,
-            AssumeRolePolicyDocument=assume_role_policy_document_json
-        )
+        return agentcore_iam_role
 
-    # Attach the AWSLambdaBasicExecutionRole policy
+    # Attach the inline policy
     print(f"attaching role policy {agentcore_role_name}")
     try:
         iam_client.put_role_policy(
@@ -847,4 +835,22 @@ def create_agentcore_role(agent_name):
     except Exception as e:
         print(e)
 
+    # Attach the AWS managed policy for Bedrock AgentCore Memory
+    print(f"attaching AWS managed policy for Bedrock AgentCore Memory to {agentcore_role_name}")
+    try:
+        iam_client.attach_role_policy(
+            RoleName=agentcore_role_name,
+            PolicyArn="arn:aws:iam::aws:policy/AmazonBedrockAgentCoreMemoryBedrockModelInferenceExecutionRolePolicy"
+        )
+    except Exception as e:
+        print(f"Error attaching managed policy: {e}")
+        
+    print(f"attaching AWS managed policy for Bedrock AgentCore Full Access to {agentcore_role_name}")
+    try:
+        iam_client.attach_role_policy(
+            RoleName=agentcore_role_name,
+            PolicyArn="arn:aws:iam::aws:policy/BedrockAgentCoreFullAccess"
+        )
+    except Exception as e:
+        print(f"Error attaching managed policy: {e}")
     return agentcore_iam_role

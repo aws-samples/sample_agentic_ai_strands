@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 .env.local
+.env.backup
+.env_setup
 .DS_Store
 cdk-outputs.env
 agentcore_scripts/iam-role.txt
