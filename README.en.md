@@ -131,7 +131,7 @@ AGENTCORE_RUNTIME_ARN=arn:aws:bedrock-agentcore:us-west-2:xxxx:runtime/agent_run
 
 ## 3. Deploying Frontend and Backend to ECS
 (Production mode, AWS ECS deployment)
-Please refer to the [CDK Deployment Guide](cdk/README-CDK.md)
+Please refer to the [CDK Deployment Guide](cdk/README-CDK_en.md)
 ![img](assets/ecs_fargate_architecture.png)
 
 This demo follows AWS best practices by deploying applications in private subnets with public access through load balancers and serverless container management via Fargate. The architecture includes:
