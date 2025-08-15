@@ -513,6 +513,14 @@ export class EcsFargateStack extends cdk.Stack {
       resources: taskRoleSecretsManagerResources,
     }));
 
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'bedrock-agentcore:*',
+      ],
+      resources: ["*"]
+    }));
+
     // Add S3 permissions for bucket creation and write operations
     // S3 ARN format differs between global and China regions
     const s3ArnPrefix = isChinaRegion ? 'arn:aws-cn:s3:::' : 'arn:aws:s3:::';

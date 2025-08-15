@@ -70,6 +70,10 @@ NodeJS [下载安装](https://nodejs.org/en/download)，本项目已对 `v22.18.
 
 首先，安装 Python 包管理工具 uv，具体可参考 [uv](https://docs.astral.sh/uv/getting-started/installation/) 官方指南
 
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
 ### 2.3 Docker(如有可跳过)
 - 安装Docker和Docker Compose：https://docs.docker.com/get-docker/
 - Linux下安装Docker命令：
@@ -90,26 +94,19 @@ ln -s /usr/bin/docker-compose  /usr/local/bin/docker-compose
 cd agentcore_scripts/
 bash run_setup.sh
 ```
-运行完成后会在`agentcore_scripts/`目录下生成3个新文件:  
-
-从`.env_cognito`文件中找到下面2个配置, 后面配置.env会用到:   
+运行完成后会在`agentcore_scripts/`目录下生成`.env_setup`，项目根目录下生成`.env`和`.bedrock_agentcore.yaml`, 三个文件。
+其中`.env_setup`中有配置AgentCore runtime所需要的ECR，Cognito配置:    
+示例：  
 ```
-pool_id=us-west-xxx
-app_client_id=xxxxxx
-m2m_client_id=
-m2m_client_secret=
-scope_string=
-discovery_url=
-```
-
-从`iam-role.txt`文件中找到role arn，后面创建agentcore runtime会用到:   
-```
-Role ARN: arn:aws:iam::xxxx:role/agentcore-strands_agent_role-role
-```
-
-从`memory.txt`文件中找到memory id，后面创建agentcore runtime会用到:
-```
-✅ Created memory: {memory_id}
+ECR_REPOSITORY_URI=xxx.dkr.ecr.us-west-2.amazonaws.com/bedrock_agentcore-agent_runtime
+AGENTCORE_EXECUTION_ROLE=arn:aws:iam::xxx:role/agentcore-strands_agent_role-role
+COGNITO_USER_POOL_ID=us-west-xxx
+COGNITO_CLIENT_ID=xxx
+COGNITO_M2M_CLIENT_ID=xxx
+COGNITO_M2M_CLIENT_SECRET=xxx
+COGNITO_M2M_CLIENT_SCOPE="strands-demo-resource-server-id/gateway:read strands-demo-resource-server-id/gateway:write"
+discovery_url=https://cognito-idp.us-west-2.amazonaws.com/us-west-xxx/.well-known/openid-configuration
+MEMORY_ID=AgentMemory-xxxx
 ```
 
 
@@ -120,61 +117,16 @@ cd ./sample_agentic_ai_strands
 uv sync
 ```
 
-2. 先运行一下命令创建ECR repo
-```bash
-aws ecr create-repository \
-    --repository-name bedrock_agentcore-agent_runtime \
-    --region us-west-2
-```
-
-3. 将`bedrock_agentcore_template.yaml`复制为`.bedrock_agentcore.yaml`,  
-```bash
-cp bedrock_agentcore_template.yaml .bedrock_agentcore.yaml
-```  
-然后将里面的account，region，ecr_repository等信息，以及execution_role进行更改，其他role可以从前一步`iam-role.txt`中获取。  
-
-### 2.6 环境变量设置
-- 把env.example 改成.env,根据情况取消注释，修改以下变量：
-- 进入项目目录
-```bash
-cp env.example .env
-```
-  
-- 使用vim 打开.env文件编辑： 
-- ！！⚠️注意COGNITO_M2M_CLIENT_SCOPE变量有空格，需要加双引号
-```bash
-# =============================================================================
-# COGNITO AUTHENTICATION CONFIGURATION
-# AWS Cognito UserPool configuration for JWT token authentication
-# =============================================================================
-COGNITO_USER_POOL_ID=<pool_id>
-COGNITO_CLIENT_ID=<app_client_id>
-COGNITO_M2M_CLIENT_ID=<m2m_client_id>
-COGNITO_M2M_CLIENT_SECRET=<m2m_client_secret>
-COGNITO_M2M_CLIENT_SCOPE="<scope_string>"
-# =============================================================================
-# AWS Infra CONFIGURATION
-# The default ECS platform is amd64, you can choose linux/amd64  or  linux/arm64
-# =============================================================================
-PLATFORM=linux/arm64
-AWS_REGION=us-west-2
-# =============================================================================
-# AGENTCORE CONFIGURATION
-# =============================================================================
-AGENTCORE_REGION=us-west-2
-MEMORY_ID=<your_agentcore_memory_id>
-```  
-
-### 2.7 部署AgentCore Runtime
+### 2.6 部署AgentCore Runtime
 运行agentcore cli部署runtime（注意需要在arm环境中）
 ```bash
-uv run agentcore launch
+agentcore launch
 ```
-部署完成后，在控制台会看到 `Agent ARN`，请再次打开.env文件，把arn配置到以下环境变量中。
+部署完成后，在控制台会看到 `Agent ARN`，请使用vim 打开`.env`文件编辑，把arn配置到以下环境变量中。
+例如：  
 ```bash
-AGENTCORE_RUNTIME_ARN=<your_agentcore_runtime_arn>
+AGENTCORE_RUNTIME_ARN=arn:aws:bedrock-agentcore:us-west-2:xxxx:runtime/agent_runtime-xxxxx
 ```
-
 
 ## 3. 部署前端和Web后端到ECS
 （生产模式，AWS ECS部署）

@@ -16,12 +16,11 @@ if __name__ == '__main__':
     scope_string = cognito_config['scope_string']
     discovery_url = cognito_config['discovery_url']
     
-    with open(".env_cognito", "w") as f:
-        f.write(f"pool_id={pool_id}\n")
-        f.write(f"app_client_id={app_client_id}\n")
-        f.write(f"m2m_client_id={m2m_client_id}\n")
-        f.write(f"m2m_client_secret={m2m_client_secret}\n")
-        f.write(f"scope_string={scope_string}\n")
-        f.write(f"discovery_url={discovery_url}")
-    print("Cognito config saved to .env_cognito")
-    print(cognito_config) 
+    with open(".env_setup", "a") as f:
+        f.write(f"COGNITO_USER_POOL_ID={pool_id}\n")
+        f.write(f"COGNITO_CLIENT_ID={app_client_id}\n")
+        f.write(f"COGNITO_M2M_CLIENT_ID={m2m_client_id}\n")
+        f.write(f"COGNITO_M2M_CLIENT_SECRET={m2m_client_secret}\n")
+        f.write(f"COGNITO_M2M_CLIENT_SCOPE=\"{scope_string}\"\n")
+        f.write(f"discovery_url={discovery_url}\n")
+    print("Cognito config saved to .env_setup")

@@ -8,3 +8,6 @@ if __name__ == '__main__':
     print(f"IAM role created ✓")
     print(f"Role ARN: {agentcore_iam_role['Role']['Arn']}")
 
+    with open(".env_setup", "a") as f:
+        f.write(f"AGENTCORE_EXECUTION_ROLE={agentcore_iam_role['Role']['Arn']}\n")
+    print("IAM role config saved to .env_setup")

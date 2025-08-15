@@ -1,0 +1,521 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+      {
+          "Sid": "STSPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "sts:GetCallerIdentity"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "ECRRepositoryPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "ecr:CreateRepository",
+              "ecr:DeleteRepository",
+              "ecr:DescribeRepositories",
+              "ecr:BatchCheckLayerAvailability",
+              "ecr:GetDownloadUrlForLayer",
+              "ecr:BatchGetImage",
+              "ecr:InitiateLayerUpload",
+              "ecr:UploadLayerPart",
+              "ecr:CompleteLayerUpload",
+              "ecr:PutImage",
+              "ecr:TagResource",
+              "ecr:ListTagsForResource",
+              "ecr:PutLifecyclePolicy",
+              "ecr:GetLifecyclePolicy",
+              "ecr:DeleteLifecyclePolicy",
+              "ecr:SetRepositoryPolicy",
+              "ecr:GetRepositoryPolicy",
+              "ecr:DeleteRepositoryPolicy"
+          ],
+          "Resource": [
+              "arn:aws:ecr:*:*:repository/strands-agentcore-*",
+              "arn:aws:ecr:*:*:repository/strands-mcp-app-*",
+              "arn:aws:ecr:*:*:repository/cdk-*",
+              "arn:aws:ecr:*:*:repository/bedrock-agentcore-*"
+          ]
+      },
+      {
+          "Sid": "ECRAuthPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "ecr:GetAuthorizationToken"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "SecretsManagerPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "secretsmanager:CreateSecret",
+              "secretsmanager:UpdateSecret",
+              "secretsmanager:GetSecretValue",
+              "secretsmanager:DescribeSecret",
+              "secretsmanager:TagResource"
+          ],
+          "Resource": [
+              "arn:aws:secretsmanager:*:*:secret:strands-agentcore/*",
+              "arn:aws:secretsmanager:*:*:secret:strands-mcp-app/*"
+          ]
+      },
+      {
+          "Sid": "SecretsManagerListPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "secretsmanager:ListSecrets"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "CloudFormationStackPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "cloudformation:*"
+          ],
+          "Resource": [
+              "arn:aws:cloudformation:*:*:stack/StrandsAgentsEcsFargateStack/*",
+              "arn:aws:cloudformation:*:*:stack/CDKToolkit/*"
+          ]
+      },
+      {
+          "Sid": "CloudFormationListPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "cloudformation:ListStacks"
+          ],
+          "Resource": "*"
+      },
+      {
+        "Sid": "CodeBuildPermissions",
+        "Effect": "Allow",
+        "Action": [
+            "codebuild:*"
+        ],
+        "Resource": "arn:aws:codebuild:*:*:project/bedrock-agentcore*"
+    },
+      {
+          "Sid": "CDKBootstrapPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "s3:CreateBucket",
+              "s3:DeleteBucket",
+              "s3:PutBucketPolicy",
+              "s3:PutBucketVersioning",
+              "s3:PutBucketNotification",
+              "s3:PutBucketPublicAccessBlock",
+              "s3:PutEncryptionConfiguration",
+              "s3:PutBucketAcl",
+              "s3:GetBucketAcl",
+              "s3:PutBucketTagging",
+              "s3:GetBucketTagging",
+              "s3:PutBucketLogging",
+              "s3:GetBucketLogging",
+              "s3:PutLifecycleConfiguration",
+              "s3:GetLifecycleConfiguration",
+              "s3:PutObject",
+              "s3:GetObject",
+              "s3:GetObjectVersion",
+              "s3:GetBucketLocation",
+              "s3:ListBucket",
+              "s3:ListBucketVersions",
+              "s3:DeleteObject",
+              "s3:DeleteObjectVersion",
+              "s3:GetBucketPolicy",
+              "s3:GetBucketVersioning",
+              "s3:GetBucketNotification"
+          ],
+          "Resource": [
+              "arn:aws:s3:::cdk-*",
+              "arn:aws:s3:::cdk-*/*",
+              "arn:aws:s3:::bedrock-agentcore-codebuild-sources-*"
+          ]
+      },
+      {
+          "Sid": "VPCResourcePermissions",
+          "Effect": "Allow",
+          "Action": [
+              "ec2:CreateVpc",
+              "ec2:DeleteVpc",
+              "ec2:ModifyVpcAttribute",
+              "ec2:CreateSubnet",
+              "ec2:DeleteSubnet",
+              "ec2:ModifySubnetAttribute",
+              "ec2:CreateInternetGateway",
+              "ec2:DeleteInternetGateway",
+              "ec2:AttachInternetGateway",
+              "ec2:DetachInternetGateway",
+              "ec2:CreateNatGateway",
+              "ec2:DeleteNatGateway",
+              "ec2:CreateRouteTable",
+              "ec2:DeleteRouteTable",
+              "ec2:CreateRoute",
+              "ec2:DeleteRoute",
+              "ec2:AssociateRouteTable",
+              "ec2:DisassociateRouteTable",
+              "ec2:AllocateAddress",
+              "ec2:ReleaseAddress",
+              "ec2:CreateTags",
+              "ec2:DeleteTags"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "VPCDescribePermissions",
+          "Effect": "Allow",
+          "Action": [
+              "ec2:DescribeVpcs",
+              "ec2:DescribeSubnets",
+              "ec2:DescribeInternetGateways",
+              "ec2:DescribeNatGateways",
+              "ec2:DescribeRouteTables",
+              "ec2:DescribeAddresses",
+              "ec2:DescribeAvailabilityZones",
+              "ec2:DescribeTags",
+              "ec2:DescribeSecurityGroups"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "SecurityGroupPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "ec2:CreateSecurityGroup",
+              "ec2:DeleteSecurityGroup",
+              "ec2:AuthorizeSecurityGroupIngress",
+              "ec2:AuthorizeSecurityGroupEgress",
+              "ec2:RevokeSecurityGroupIngress",
+              "ec2:RevokeSecurityGroupEgress",
+              "ec2:ModifySecurityGroupRules"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "ECSClusterPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "ecs:CreateCluster",
+              "ecs:DeleteCluster",
+              "ecs:DescribeClusters",
+              "ecs:UpdateCluster",
+              "ecs:TagResource",
+              "ecs:UntagResource",
+              "ecs:ListTagsForResource"
+          ],
+          "Resource": [
+              "arn:aws:ecs:*:*:cluster/strands-agentcore-*",
+              "arn:aws:ecs:*:*:cluster/strands-mcp-app-*"
+          ]
+      },
+      {
+          "Sid": "ECSServicePermissions",
+          "Effect": "Allow",
+          "Action": [
+              "ecs:CreateService",
+              "ecs:DeleteService",
+              "ecs:DescribeServices",
+              "ecs:UpdateService",
+              "ecs:ListServices",
+              "ecs:TagResource",
+              "ecs:UntagResource",
+              "ecs:ListTagsForResource",
+              "ecs:ListServices"
+          ],
+          "Resource": [
+              "arn:aws:ecs:*:*:service/strands-agentcore-*/strands-agentcore-*",
+              "arn:aws:ecs:*:*:service/strands-mcp-app-*/strands-mcp-app-*"
+          ]
+      },
+      {
+          "Sid": "ECSTaskDefinitionPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "ecs:RegisterTaskDefinition",
+              "ecs:DeregisterTaskDefinition",
+              "ecs:DescribeTaskDefinition",
+              "ecs:ListTaskDefinitions"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "ECSTaskPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "ecs:ListTasks",
+              "ecs:DescribeTasks",
+              "ecs:RunTask",
+              "ecs:StopTask"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "ECSAccountSettings",
+          "Effect": "Allow",
+          "Action": [
+              "ecs:PutAccountSetting",
+              "ecs:PutClusterCapacityProviders",
+              "ecs:CreateCapacityProvider",
+              "ecs:DescribeCapacityProviders"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "LoadBalancerPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "elasticloadbalancing:*"
+          ],
+          "Resource": [
+              "arn:aws:elasticloadbalancing:*:*:loadbalancer/app/strands-*/*",
+              "arn:aws:elasticloadbalancing:*:*:targetgroup/strands-*/*",
+              "arn:aws:elasticloadbalancing:*:*:listener/app/strands-*/*/*",
+              "arn:aws:elasticloadbalancing:*:*:listener-rule/app/strands-*/*/*/*"
+          ]
+      },
+      {
+          "Sid": "LoadBalancerDescribePermissions",
+          "Effect": "Allow",
+          "Action": [
+              "elasticloadbalancing:DescribeLoadBalancers",
+              "elasticloadbalancing:DescribeTargetGroups",
+              "elasticloadbalancing:DescribeListeners",
+              "elasticloadbalancing:DescribeRules",
+              "elasticloadbalancing:DescribeTargetHealth",
+              "elasticloadbalancing:DescribeTags"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "DynamoDBTablePermissions",
+          "Effect": "Allow",
+          "Action": [
+              "dynamodb:*"
+          ],
+          "Resource": [
+              "arn:aws:dynamodb:*:*:table/agent_user_config_table",
+              "arn:aws:dynamodb:*:*:table/strands-*"
+          ]
+      },
+      {
+          "Sid": "DynamoDBListPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "dynamodb:ListTables"
+          ],
+          "Resource": "*"
+      },
+      {
+        "Sid": "CognitoUserPoolPermissions",
+        "Effect": "Allow",
+        "Action": [
+            "cognito-idp:*"
+        ],
+        "Resource": [
+            "arn:aws:cognito-idp:*:*:userpool/*"
+        ]
+      },
+      {
+          "Sid": "IAMRolePermissions",
+          "Effect": "Allow",
+          "Action": [
+              "iam:CreateRole",
+              "iam:DeleteRole",
+              "iam:GetRole",
+              "iam:UpdateRole",
+              "iam:AttachRolePolicy",
+              "iam:DetachRolePolicy",
+              "iam:PutRolePolicy",
+              "iam:DeleteRolePolicy",
+              "iam:GetRolePolicy",
+              "iam:ListRolePolicies",
+              "iam:ListAttachedRolePolicies",
+              "iam:TagRole",
+              "iam:UntagRole",
+              "iam:ListRoleTags"
+          ],
+          "Resource": [
+              "arn:aws:iam::*:role/StrandsAgentsEcsFargateStack-*",
+              "arn:aws:iam::*:role/cdk-*",
+              "arn:aws:iam::*:role/agentcore-strands_agent_role*"
+          ]
+      },
+      {
+          "Sid": "IAMInstanceProfilePermissions",
+          "Effect": "Allow",
+          "Action": [
+              "iam:CreateInstanceProfile",
+              "iam:DeleteInstanceProfile",
+              "iam:GetInstanceProfile",
+              "iam:AddRoleToInstanceProfile",
+              "iam:RemoveRoleFromInstanceProfile"
+          ],
+          "Resource": [
+              "arn:aws:iam::*:instance-profile/StrandsAgentsEcsFargateStack-*",
+              "arn:aws:iam::*:instance-profile/cdk-*",
+              "arn:aws:iam::*:instance-profile/agentcore-strands_agent_role*"
+
+          ]
+      },
+      {
+          "Sid": "IAMPassRolePermissions",
+          "Effect": "Allow",
+          "Action": [
+              "iam:PassRole"
+          ],
+          "Resource": [
+              "arn:aws:iam::*:role/StrandsAgentsEcsFargateStack-*",
+              "arn:aws:iam::*:role/cdk-*",
+              "arn:aws:iam::*:role/AmazonBedrockAgentCoreSDKCodeBuild*"
+          ]
+      },
+      {
+          "Sid": "CloudWatchLogsPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "logs:CreateLogGroup",
+              "logs:DeleteLogGroup",
+              "logs:DescribeLogGroups",
+              "logs:PutRetentionPolicy",
+              "logs:DeleteRetentionPolicy",
+              "logs:TagLogGroup",
+              "logs:UntagLogGroup",
+              "logs:ListTagsLogGroup"
+          ],
+          "Resource": [
+              "arn:aws:logs:*:*:log-group:/ecs/strands-*",
+              "arn:aws:logs:*:*:log-group:/aws/lambda/strands-*"
+          ]
+      },
+      {
+          "Sid": "ApplicationAutoScalingPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "application-autoscaling:RegisterScalableTarget",
+              "application-autoscaling:DeregisterScalableTarget",
+              "application-autoscaling:DescribeScalableTargets",
+              "application-autoscaling:PutScalingPolicy",
+              "application-autoscaling:DeleteScalingPolicy",
+              "application-autoscaling:DescribeScalingPolicies",
+              "application-autoscaling:DescribeScalingActivities"
+          ],
+          "Resource": "*",
+          "Condition": {
+              "StringLike": {
+                  "application-autoscaling:service-namespace": "ecs"
+              }
+          }
+      },
+      {
+          "Sid": "CloudWatchAlarmsPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "cloudwatch:PutMetricAlarm",
+              "cloudwatch:DeleteAlarms",
+              "cloudwatch:DescribeAlarms",
+              "cloudwatch:EnableAlarmActions",
+              "cloudwatch:DisableAlarmActions"
+          ],
+          "Resource": [
+              "arn:aws:cloudwatch:*:*:alarm:strands-*"
+          ]
+      },
+      {
+          "Sid": "LambdaFunctionPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "lambda:CreateFunction",
+              "lambda:DeleteFunction",
+              "lambda:GetFunction",
+              "lambda:UpdateFunctionCode",
+              "lambda:UpdateFunctionConfiguration",
+              "lambda:InvokeFunction",
+              "lambda:TagResource",
+              "lambda:UntagResource",
+              "lambda:ListTags"
+          ],
+          "Resource": [
+              "arn:aws:lambda:*:*:function:strands-*"
+          ]
+      },
+      {
+          "Sid": "SSMParameterPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "ssm:GetParameter",
+              "ssm:GetParameters",
+              "ssm:PutParameter",
+              "ssm:DeleteParameter",
+              "ssm:AddTagsToResource",
+              "ssm:RemoveTagsFromResource",
+              "ssm:ListTagsForResource"
+          ],
+          "Resource": [
+              "arn:aws:ssm:*:*:parameter/strands-*",
+              "arn:aws:ssm:*:*:parameter/cdk-*"
+          ]
+      },
+      {
+          "Sid": "SSMDescribePermissions",
+          "Effect": "Allow",
+          "Action": [
+              "ssm:DescribeParameters"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "BedrockPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "bedrock:InvokeModel",
+              "bedrock:InvokeModelWithResponseStream",
+              "bedrock:ListFoundationModels",
+              "bedrock-agentcore:*"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "S3GeneralPermissions",
+          "Effect": "Allow",
+          "Action": [
+              "s3:ListAllMyBuckets",
+              "s3:GetBucketLocation"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "KMSPermissionsForCDK",
+          "Effect": "Allow",
+          "Action": [
+              "kms:CreateKey",
+              "kms:CreateAlias",
+              "kms:DeleteAlias",
+              "kms:DescribeKey",
+              "kms:EnableKeyRotation",
+              "kms:GetKeyPolicy",
+              "kms:GetKeyRotationStatus",
+              "kms:ListAliases",
+              "kms:ListKeys",
+              "kms:PutKeyPolicy",
+              "kms:TagResource",
+              "kms:UntagResource"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "CloudFormationTemplatePermissions",
+          "Effect": "Allow",
+          "Action": [
+              "cloudformation:GetTemplate",
+              "cloudformation:DescribeStackEvents",
+              "cloudformation:DescribeStackResources",
+              "cloudformation:DescribeStacks",
+              "cloudformation:ListStackResources",
+              "cloudformation:ValidateTemplate"
+          ],
+          "Resource": "*"
+      }
+  ]
+}
