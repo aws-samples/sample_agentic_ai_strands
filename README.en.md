@@ -1,6 +1,4 @@
-# Agentic AI with Bedrock AgentCore and Strands Agents SDK
-
-[English](./README.en.md)
+# Agentic AI with Bedrock AgentCore and Strands Agents SDK [中文](./README.md)
 
 ## 1. Overview
 
@@ -61,13 +59,17 @@ Most MCP Servers are developed using NodeJS or Python and run on users' PCs, req
 
 ### 2.1 NodeJS
 
-Download and install NodeJS from [nodejs.org](https://nodejs.org/en). This project has been thoroughly tested with version `v22.12.0`.
+Download and install NodeJS from [nodejs.org](https://nodejs.org/en/download). This project has been thoroughly tested with version `v22.18.0`.
 
 ### 2.2 Python
 
 Some MCP Servers are Python-based, requiring [Python installation](https://www.python.org/downloads/). This project's code is also Python-based.
 
-First, install the Python package management tool `uv` by following the [official guide](https://docs.astral.sh/uv/getting-started/installation/).
+First, install the Python package management tool `uv` by following the [official guide](https://docs.astral.sh/uv/getting-started/installation/):
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
 ### 2.3 Docker (Optional)
 - Install Docker and Docker Compose: https://docs.docker.com/get-docker/
@@ -90,89 +92,41 @@ cd agentcore_scripts/
 bash run_setup.sh
 ```
 
-The script will generate three new files in the `agentcore_scripts/` directory:
+After completion, the script will generate `.env_setup` in the `agentcore_scripts/` directory, and `.env` and `.bedrock_agentcore.yaml` in the project root directory.
 
-From `.env_cognito`, extract the following configurations needed for `.env`:
-```
-pool_id=us-west-xxx
-app_client_id=xxxxxx
-m2m_client_id=
-m2m_client_secret=
-scope_string=
-discovery_url=
-```
+The `.env_setup` file contains the ECR and Cognito configurations needed for AgentCore runtime:
 
-From `iam-role.txt`, find the role ARN for AgentCore runtime creation:
+Example:
 ```
-Role ARN: arn:aws:iam::xxxx:role/agentcore-strands_agent_role-role
-```
-
-From `memory.txt`, find the memory ID for AgentCore runtime creation:
-```
-✅ Created memory: {memory_id}
+ECR_REPOSITORY_URI=xxx.dkr.ecr.us-west-2.amazonaws.com/bedrock_agentcore-agent_runtime
+AGENTCORE_EXECUTION_ROLE=arn:aws:iam::xxx:role/agentcore-strands_agent_role-role
+COGNITO_USER_POOL_ID=us-west-xxx
+COGNITO_CLIENT_ID=xxx
+COGNITO_M2M_CLIENT_ID=xxx
+COGNITO_M2M_CLIENT_SECRET=xxx
+COGNITO_M2M_CLIENT_SCOPE="strands-demo-resource-server-id/gateway:read strands-demo-resource-server-id/gateway:write"
+discovery_url=https://cognito-idp.us-west-2.amazonaws.com/us-west-xxx/.well-known/openid-configuration
+MEMORY_ID=AgentMemory-xxxx
 ```
 
 ### 2.5 Creating AgentCore Runtime Configuration
-1. Create a Python virtual environment and install dependencies:
+1. Navigate to the project directory and create a Python virtual environment with dependencies:
 ```bash
 cd ./sample_agentic_ai_strands
 uv sync
 ```
 
-2. Create an ECR repository:
-```bash
-aws ecr create-repository \
-    --repository-name bedrock_agentcore-agent_runtime \
-    --region us-west-2
-```
-
-3. Copy the template configuration file:
-```bash
-cp bedrock_agentcore_template.yaml .bedrock_agentcore.yaml
-```
-Update account, region, ECR repository information, and execution role. Use role information from `iam-role.txt`.
-
-
-### 2.6 Environment Variables
-Copy the example environment file and edit as needed:
-```bash
-cp env.example .env
-```
-
-Edit the `.env` file using vim:
-⚠️ Note: The `COGNITO_M2M_CLIENT_SCOPE` variable contains spaces and requires double quotes
-```bash
-# =============================================================================
-# COGNITO AUTHENTICATION CONFIGURATION
-# AWS Cognito UserPool configuration for JWT token authentication
-# =============================================================================
-COGNITO_USER_POOL_ID=<pool_id>
-COGNITO_CLIENT_ID=<app_client_id>
-COGNITO_M2M_CLIENT_ID=<m2m_client_id>
-COGNITO_M2M_CLIENT_SECRET=<m2m_client_secret>
-COGNITO_M2M_CLIENT_SCOPE="<scope_string>"
-# =============================================================================
-# AWS Infra CONFIGURATION
-# The default ECS platform is amd64, you can choose linux/amd64 or linux/arm64
-# =============================================================================
-PLATFORM=linux/arm64
-AWS_REGION=us-west-2
-# =============================================================================
-# AGENTCORE CONFIGURATION
-# =============================================================================
-AGENTCORE_REGION=us-west-2
-MEMORY_ID=<your_agentcore_memory_id>
-```
-
-### 2.7 Deploying AgentCore Runtime
+### 2.6 Deploying AgentCore Runtime
 Launch the AgentCore runtime using the CLI (requires ARM environment):
 ```bash
 agentcore launch
 ```
 
-After successful deployment, note the `Agent ARN` from the console output and add it to your `.env` file:
+After successful deployment, note the `Agent ARN` from the console output and edit the `.env` file to add the ARN to the following environment variable:
+
+Example:
 ```bash
-AGENTCORE_RUNTIME_ARN=<your_agentcore_runtime_arn>
+AGENTCORE_RUNTIME_ARN=arn:aws:bedrock-agentcore:us-west-2:xxxx:runtime/agent_runtime-xxxxx
 ```
 
 ## 3. Deploying Frontend and Backend to ECS
@@ -278,8 +232,8 @@ Payload example:
 }
 ```
 
-- Input: `帮我写一份关于amazon bedrock agentcore的研究报告，使用中文`
+- Input: `Help me write a research report about Amazon Bedrock AgentCore in Chinese`
 ![alt text](assets/swarm_deepresearch.png)
 
-## 6. Additional Examples
-- [Case Studies](./README_cases.md)
+## 6. More Examples
+- [Case Studies](./README_cases_en.md)
