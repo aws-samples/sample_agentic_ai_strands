@@ -1,7 +1,10 @@
 #!/bin/bash
 set -e
 
-rm .env_setup
+# Remove .env_setup if it exists
+if [ -f .env_setup ]; then
+    rm .env_setup
+fi
 echo "============setup ecr repo================"
 uv run ./setup_ecr.py
 
