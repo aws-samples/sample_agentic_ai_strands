@@ -120,7 +120,7 @@ uv sync
 ### 2.6 部署AgentCore Runtime
 运行agentcore cli部署runtime（注意需要在arm环境中）
 ```bash
-agentcore launch
+uv run agentcore launch
 ```
 部署完成后，在控制台会看到 `Agent ARN`，请使用vim 打开`.env`文件编辑，把arn配置到以下环境变量中。
 例如：  

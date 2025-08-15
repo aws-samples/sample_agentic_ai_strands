@@ -119,7 +119,7 @@ uv sync
 ### 2.6 Deploying AgentCore Runtime
 Launch the AgentCore runtime using the CLI (requires ARM environment):
 ```bash
-agentcore launch
+uv run agentcore launch
 ```
 
 After successful deployment, note the `Agent ARN` from the console output and edit the `.env` file to add the ARN to the following environment variable:
