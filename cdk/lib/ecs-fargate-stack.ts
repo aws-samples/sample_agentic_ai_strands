@@ -630,8 +630,6 @@ export class EcsFargateStack extends cdk.Stack {
       LANGFUSE_SECRET_KEY: process.env.LANGFUSE_SECRET_KEY || "",
       BYPASS_TOOL_CONSENT: 'true',
       BEDROCK_AWS_REGION:process.env.BEDROCK_AWS_REGION || process.env.AWS_REGION || "",
-      LLM_MODEL: process.env.LLM_MODEL||"Qwen/Qwen3-14B",
-      EMBEDDING_MODEL: process.env.EMBEDDING_MODEL ||"Pro/BAAI/bge-m3",
       AGENTCORE_RUNTIME_ARN: process.env.AGENTCORE_RUNTIME_ARN ||"",
       MEMORY_ID:process.env.MEMORY_ID || "",
       AGENTCORE_REGION:process.env.AGENTCORE_REGION || "",
