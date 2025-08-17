@@ -126,12 +126,31 @@ After successful deployment, note the `Agent ARN` from the console output and ed
 
 Example:
 ```bash
-AGENTCORE_RUNTIME_ARN=arn:aws:bedrock-agentcore:us-west-2:xxxx:runtime/agent_runtime-xxxxx
+AGENTCORE_RUNTIME_ARN=arn:aws:bedrock-agentcore:us-west-2:xxxx:runtime/xxxxx
 ```
 
 ## 3. Deploying Frontend and Backend to ECS
 (Production mode, AWS ECS deployment)
-Please refer to the [CDK Deployment Guide](cdk/README-CDK_en.md)
+```bash
+cd cdk/
+# Install CDK CLI
+npm install -g aws-cdk
+npm install -g typescript
+npm install
+npm i --save-dev @types/node
+```
+
+run CDK bootstrap if you never used cdk in this account  
+```bash
+npx cdk bootstrap
+```
+
+run CDK deploy  
+```bash
+./cdk-build-and-deploy.sh
+```
+
+
 ![img](assets/ecs_fargate_architecture.png)
 
 This demo follows AWS best practices by deploying applications in private subnets with public access through load balancers and serverless container management via Fargate. The architecture includes:

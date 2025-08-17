@@ -125,12 +125,30 @@ uv run agentcore launch
 部署完成后，在控制台会看到 `Agent ARN`，请使用vim 打开`.env`文件编辑，把arn配置到以下环境变量中。
 例如：  
 ```bash
-AGENTCORE_RUNTIME_ARN=arn:aws:bedrock-agentcore:us-west-2:xxxx:runtime/agent_runtime-xxxxx
+AGENTCORE_RUNTIME_ARN=arn:aws:bedrock-agentcore:us-west-2:xxxx:runtime/xxxxx
 ```
 
 ## 3. 部署前端和Web后端到ECS
 （生产模式，AWS ECS部署）
-请参考 [CDK部署说明](cdk/README-CDK.md)
+```bash
+cd cdk/
+# Install CDK CLI
+npm install -g aws-cdk
+npm install -g typescript
+npm install
+npm i --save-dev @types/node
+```
+
+如果之前没有CDK bootstrap  
+```bash
+npx cdk bootstrap
+```
+
+运行部署脚本  
+```bash
+./cdk-build-and-deploy.sh
+```
+
 ![img](assets/ecs_fargate_architecture.png)
  这个Demo的部署架构遵循AWS最佳实践，将应用程序部署在私有子网中，通过负载均衡器提供公共访问，并使用Fargate实现无服务器容器管理。 这个部署架构包含以下主要亚马逊云组件：
 1. ECS Cluster：
