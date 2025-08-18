@@ -6,7 +6,14 @@ set -a
 source ../.env
 set +a
 # 配置变量
-REGION="${AWS_REGION:-us-east-2}"
+if [ -z "$AWS_REGION" ]; then
+    echo "Error: AWS_REGION environment variable is not set."
+    echo "Please set AWS_REGION before running this script:"
+    echo "  export AWS_REGION=us-west-2"
+    echo "  # or your preferred AWS region"
+    exit 1
+fi
+REGION="$AWS_REGION"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 PREFIX="strands-agentcore"
 
