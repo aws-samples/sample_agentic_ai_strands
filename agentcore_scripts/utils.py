@@ -570,8 +570,8 @@ def setup_cognito_user_pool_with_signup(pool_name = "StrandDemoPoolWithSignup" )
                     print(f"✅ Updated existing resource server: {RESOURCE_SERVER_ID}")
                 except Exception as update_error:
                     print(f"⚠️ Failed to update resource server (continuing with existing settings): {update_error}")
-            else:
-                raise e
+            # else:
+            #     raise e
 
         # Try to create M2M client or find existing one
         M2M_CLIENT_NAME = "strands-demo-m2m-client"
@@ -627,8 +627,8 @@ def setup_cognito_user_pool_with_signup(pool_name = "StrandDemoPoolWithSignup" )
                     print(f"✅ Updated existing M2M client: {m2m_client_id}")
                 except Exception as update_error:
                     print(f"⚠️ Failed to update M2M client (continuing with existing settings): {update_error}")
-            else:
-                raise e
+            # else:
+            #     raise e
         
         # get domain
         response = cognito_client.describe_user_pool(UserPoolId=pool_id)
