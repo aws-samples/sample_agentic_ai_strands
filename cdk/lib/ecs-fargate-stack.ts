@@ -603,8 +603,8 @@ export class EcsFargateStack extends cdk.Stack {
 
     // 13. Create Backend Task Definition
     const backendTaskDefinition = new ecs.FargateTaskDefinition(this, `${prefix}-backend-task`, {
-      memoryLimitMiB: 1024*4,
-      cpu: 512*4,
+      memoryLimitMiB: 1024*1,
+      cpu: 512*1,
       executionRole: taskExecutionRole,
       taskRole: taskRole,
       runtimePlatform: {
@@ -673,7 +673,7 @@ export class EcsFargateStack extends cdk.Stack {
 
     const backendContainer = backendTaskDefinition.addContainer(`${prefix}-backend-container`, {
       image: ecs.ContainerImage.fromEcrRepository(backendRepo, 'latest'),
-      memoryLimitMiB: 1024*4,
+      memoryLimitMiB: 1024*1,
       environment: backendEnvironment,
       secrets: backendSecrets,
       logging: ecs.LogDrivers.awsLogs({
@@ -726,7 +726,7 @@ export class EcsFargateStack extends cdk.Stack {
     // 16. Enable Auto Scaling for services
     const frontendScaling = frontendService.autoScaleTaskCount({
       minCapacity: 2,
-      maxCapacity: 10,
+      maxCapacity: 4,
     });
 
     frontendScaling.scaleOnCpuUtilization(`${prefix}-frontend-cpu-scaling`, {
@@ -737,7 +737,7 @@ export class EcsFargateStack extends cdk.Stack {
 
     const backendScaling = backendService.autoScaleTaskCount({
       minCapacity: 2,
-      maxCapacity: 10,
+      maxCapacity: 4,
     });
 
     backendScaling.scaleOnCpuUtilization(`${prefix}-backend-cpu-scaling`, {
