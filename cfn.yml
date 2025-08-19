@@ -1,0 +1,557 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for launching MCP on EC2 in AWS Global Region
+
+Resources:
+  # VPC and Networking Resources
+  MCPVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: MCP-VPC
+
+  MCPInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: MCP-IGW
+
+  MCPAttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MCPVPC
+      InternetGatewayId: !Ref MCPInternetGateway
+
+  MCPPublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MCPVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: MCP-Public-Subnet
+
+  MCPPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MCPVPC
+      Tags:
+        - Key: Name
+          Value: MCP-Public-RouteTable
+
+  MCPPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: MCPAttachGateway
+    Properties:
+      RouteTableId: !Ref MCPPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref MCPInternetGateway
+
+  MCPSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref MCPPublicSubnet
+      RouteTableId: !Ref MCPPublicRouteTable
+
+  MCPInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/BedrockAgentCoreFullAccess
+        - arn:aws:iam::aws:policy/AdministratorAccess
+      Policies:
+        - PolicyName: CDKDeploymentPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: STSPermissions
+                Effect: Allow
+                Action:
+                  - sts:GetCallerIdentity
+                Resource: '*'
+              - Sid: ECRRepositoryPermissions
+                Effect: Allow
+                Action:
+                  - ecr:*
+                Resource:
+                  - arn:aws:ecr:*:*:repository/strands-agentcore-*
+                  - arn:aws:ecr:*:*:repository/strands-mcp-app-*
+                  - arn:aws:ecr:*:*:repository/cdk-*
+                  - arn:aws:ecr:*:*:repository/bedrock_agentcore-*
+                  - arn:aws:ecr:*:*:repository/bedrock-agentcore-*
+
+              - Sid: ECRAuthPermissions
+                Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+              - Sid: SecretsManagerPermissions
+                Effect: Allow
+                Action:
+                  - secretsmanager:CreateSecret
+                  - secretsmanager:UpdateSecret
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:TagResource
+                Resource:
+                  - arn:aws:secretsmanager:*:*:secret:strands-agentcore/*
+                  - arn:aws:secretsmanager:*:*:secret:strands-mcp-app/*
+              - Sid: SecretsManagerListPermissions
+                Effect: Allow
+                Action:
+                  - secretsmanager:ListSecrets
+                Resource: '*'
+              - Sid: CloudFormationStackPermissions
+                Effect: Allow
+                Action:
+                  - cloudformation:*
+                Resource:
+                  - arn:aws:cloudformation:*:*:stack/StrandsAgentsEcsFargateStack/*
+                  - arn:aws:cloudformation:*:*:stack/CDKToolkit/*
+                  - arn:aws:cloudformation:*:*:stack/McpEcsFargateStack/*
+              - Sid: CloudFormationListPermissions
+                Effect: Allow
+                Action:
+                  - cloudformation:ListStacks
+                Resource: '*'
+              - Sid: CodeBuildPermissions
+                Effect: Allow
+                Action:
+                  - codebuild:*
+                Resource: arn:aws:codebuild:*:*:project/bedrock-agentcore*
+              - Sid: CDKBootstrapPermissions
+                Effect: Allow
+                Action:
+                  - s3:*
+                Resource:
+                  - arn:aws:s3:::cdk-*
+                  - arn:aws:s3:::cdk-*/*
+                  - arn:aws:s3:::bedrock-agentcore-codebuild-sources-*
+              - Sid: VPCResourcePermissions
+                Effect: Allow
+                Action:
+                  - ec2:CreateVpc
+                  - ec2:DeleteVpc
+                  - ec2:ModifyVpcAttribute
+                  - ec2:CreateSubnet
+                  - ec2:DeleteSubnet
+                  - ec2:ModifySubnetAttribute
+                  - ec2:CreateInternetGateway
+                  - ec2:DeleteInternetGateway
+                  - ec2:AttachInternetGateway
+                  - ec2:DetachInternetGateway
+                  - ec2:CreateNatGateway
+                  - ec2:DeleteNatGateway
+                  - ec2:CreateRouteTable
+                  - ec2:DeleteRouteTable
+                  - ec2:CreateRoute
+                  - ec2:DeleteRoute
+                  - ec2:AssociateRouteTable
+                  - ec2:DisassociateRouteTable
+                  - ec2:AllocateAddress
+                  - ec2:ReleaseAddress
+                  - ec2:CreateTags
+                  - ec2:DeleteTags
+                Resource: '*'
+              - Sid: VPCDescribePermissions
+                Effect: Allow
+                Action:
+                  - ec2:DescribeVpcs
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeInternetGateways
+                  - ec2:DescribeNatGateways
+                  - ec2:DescribeRouteTables
+                  - ec2:DescribeAddresses
+                  - ec2:DescribeAvailabilityZones
+                  - ec2:DescribeTags
+                  - ec2:DescribeSecurityGroups
+                Resource: '*'
+              - Sid: SecurityGroupPermissions
+                Effect: Allow
+                Action:
+                  - ec2:CreateSecurityGroup
+                  - ec2:DeleteSecurityGroup
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:AuthorizeSecurityGroupEgress
+                  - ec2:RevokeSecurityGroupIngress
+                  - ec2:RevokeSecurityGroupEgress
+                  - ec2:ModifySecurityGroupRules
+                Resource: '*'
+              - Sid: ECSClusterPermissions
+                Effect: Allow
+                Action:
+                  - ecs:CreateCluster
+                  - ecs:DeleteCluster
+                  - ecs:DescribeClusters
+                  - ecs:UpdateCluster
+                  - ecs:TagResource
+                  - ecs:UntagResource
+                  - ecs:ListTagsForResource
+                Resource:
+                  - arn:aws:ecs:*:*:cluster/strands-agentcore-*
+                  - arn:aws:ecs:*:*:cluster/strands-mcp-app-*
+              - Sid: ECSServicePermissions
+                Effect: Allow
+                Action:
+                  - ecs:CreateService
+                  - ecs:DeleteService
+                  - ecs:DescribeServices
+                  - ecs:UpdateService
+                  - ecs:ListServices
+                  - ecs:TagResource
+                  - ecs:UntagResource
+                  - ecs:ListTagsForResource
+                  - ecs:ListServices
+                Resource:
+                  - arn:aws:ecs:*:*:service/strands-agentcore-*/strands-agentcore-*
+                  - arn:aws:ecs:*:*:service/strands-mcp-app-*/strands-mcp-app-*
+              - Sid: ECSTaskDefinitionPermissions
+                Effect: Allow
+                Action:
+                  - ecs:RegisterTaskDefinition
+                  - ecs:DeregisterTaskDefinition
+                  - ecs:DescribeTaskDefinition
+                  - ecs:ListTaskDefinitions
+                Resource: '*'
+              - Sid: ECSTaskPermissions
+                Effect: Allow
+                Action:
+                  - ecs:ListTasks
+                  - ecs:DescribeTasks
+                  - ecs:RunTask
+                  - ecs:StopTask
+                Resource: '*'
+              - Sid: ECSAccountSettings
+                Effect: Allow
+                Action:
+                  - ecs:PutAccountSetting
+                  - ecs:PutClusterCapacityProviders
+                  - ecs:CreateCapacityProvider
+                  - ecs:DescribeCapacityProviders
+                Resource: '*'
+              - Sid: LoadBalancerPermissions
+                Effect: Allow
+                Action:
+                  - elasticloadbalancing:*
+                Resource:
+                  - arn:aws:elasticloadbalancing:*:*:loadbalancer/app/strands-*/*
+                  - arn:aws:elasticloadbalancing:*:*:targetgroup/strands-*/*
+                  - arn:aws:elasticloadbalancing:*:*:listener/app/strands-*/*/*
+                  - arn:aws:elasticloadbalancing:*:*:listener-rule/app/strands-*/*/*/*
+              - Sid: LoadBalancerDescribePermissions
+                Effect: Allow
+                Action:
+                  - elasticloadbalancing:DescribeLoadBalancers
+                  - elasticloadbalancing:DescribeTargetGroups
+                  - elasticloadbalancing:DescribeListeners
+                  - elasticloadbalancing:DescribeRules
+                  - elasticloadbalancing:DescribeTargetHealth
+                  - elasticloadbalancing:DescribeTags
+                Resource: '*'
+              - Sid: DynamoDBTablePermissions
+                Effect: Allow
+                Action:
+                  - dynamodb:*
+                Resource:
+                  - arn:aws:dynamodb:*:*:table/agent_user_config_table
+                  - arn:aws:dynamodb:*:*:table/strands-*
+              - Sid: DynamoDBListPermissions
+                Effect: Allow
+                Action:
+                  - dynamodb:ListTables
+                Resource: '*'
+              - Sid: CognitoUserPoolPermissions
+                Effect: Allow
+                Action:
+                  - cognito-idp:*
+                Resource:
+                  - arn:aws:cognito-idp:*:*:userpool/*
+              - Sid: IAMRolePermissions
+                Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:UpdateRole
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:GetRolePolicy
+                  - iam:ListRolePolicies
+                  - iam:ListAttachedRolePolicies
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:ListRoleTags
+                Resource:
+                  - arn:aws:iam::*:role/StrandsAgentsEcsFargateStack-*
+                  - arn:aws:iam::*:role/cdk-*
+                  - arn:aws:iam::*:role/agentcore-strands_agent_role*
+                  - arn:aws:iam::*:role/AmazonBedrockAgentCoreSDKCodeBuild*
+                  - arn:aws:iam::*:role/AmazonBedrockAgentCoreSDKRuntime*
+              - Sid: IAMInstanceProfilePermissions
+                Effect: Allow
+                Action:
+                  - iam:CreateInstanceProfile
+                  - iam:DeleteInstanceProfile
+                  - iam:GetInstanceProfile
+                  - iam:AddRoleToInstanceProfile
+                  - iam:RemoveRoleFromInstanceProfile
+                Resource:
+                  - arn:aws:iam::*:instance-profile/StrandsAgentsEcsFargateStack-*
+                  - arn:aws:iam::*:instance-profile/cdk-*
+                  - arn:aws:iam::*:instance-profile/agentcore-strands_agent_role*
+              - Sid: IAMPassRole
+                Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource:
+                  - arn:aws:iam::*:role/StrandsAgentsEcsFargateStack-*
+                  - arn:aws:iam::*:role/cdk-*
+                  - arn:aws:iam::*:role/AmazonBedrockAgentCoreSDKCodeBuild*
+                  - arn:aws:iam::*:role/*BedrockAgentCore*
+              - Sid: CloudWatchLogsPermissions
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DeleteLogGroup
+                  - logs:DescribeLogGroups
+                  - logs:PutRetentionPolicy
+                  - logs:DeleteRetentionPolicy
+                  - logs:TagLogGroup
+                  - logs:UntagLogGroup
+                  - logs:ListTagsLogGroup
+                Resource:
+                  - arn:aws:logs:*:*:log-group:/ecs/strands-*
+                  - arn:aws:logs:*:*:log-group:/aws/lambda/strands-*
+              - Sid: ApplicationAutoScalingPermissions
+                Effect: Allow
+                Action:
+                  - application-autoscaling:RegisterScalableTarget
+                  - application-autoscaling:DeregisterScalableTarget
+                  - application-autoscaling:DescribeScalableTargets
+                  - application-autoscaling:PutScalingPolicy
+                  - application-autoscaling:DeleteScalingPolicy
+                  - application-autoscaling:DescribeScalingPolicies
+                  - application-autoscaling:DescribeScalingActivities
+                Resource: '*'
+                Condition:
+                  StringLike:
+                    application-autoscaling:service-namespace: ecs
+              - Sid: CloudWatchAlarmsPermissions
+                Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricAlarm
+                  - cloudwatch:DeleteAlarms
+                  - cloudwatch:DescribeAlarms
+                  - cloudwatch:EnableAlarmActions
+                  - cloudwatch:DisableAlarmActions
+                Resource:
+                  - arn:aws:cloudwatch:*:*:alarm:strands-*
+              - Sid: LambdaFunctionPermissions
+                Effect: Allow
+                Action:
+                  - lambda:CreateFunction
+                  - lambda:DeleteFunction
+                  - lambda:GetFunction
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                  - lambda:InvokeFunction
+                  - lambda:TagResource
+                  - lambda:UntagResource
+                  - lambda:ListTags
+                Resource:
+                  - arn:aws:lambda:*:*:function:strands-*
+              - Sid: SSMParameterPermissions
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:PutParameter
+                  - ssm:DeleteParameter
+                  - ssm:AddTagsToResource
+                  - ssm:RemoveTagsFromResource
+                  - ssm:ListTagsForResource
+                Resource:
+                  - arn:aws:ssm:*:*:parameter/strands-*
+                  - arn:aws:ssm:*:*:parameter/cdk-*
+              - Sid: SSMDescribePermissions
+                Effect: Allow
+                Action:
+                  - ssm:DescribeParameters
+                Resource: '*'
+              - Sid: Bedrock
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                  - bedrock:ListFoundationModels
+                Resource: '*'
+              - Sid: S3General
+                Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                  - s3:GetBucketLocation
+                Resource: '*'
+              - Sid: KMSPermissionsForCDK
+                Effect: Allow
+                Action:
+                  - kms:CreateKey
+                  - kms:CreateAlias
+                  - kms:DeleteAlias
+                  - kms:DescribeKey
+                  - kms:EnableKeyRotation
+                  - kms:GetKeyPolicy
+                  - kms:GetKeyRotationStatus
+                  - kms:ListAliases
+                  - kms:ListKeys
+                  - kms:PutKeyPolicy
+                  - kms:TagResource
+                  - kms:UntagResource
+                Resource: '*'
+              - Sid: CloudFormationTemplatePermissions
+                Effect: Allow
+                Action:
+                  - cloudformation:GetTemplate
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:DescribeStacks
+                  - cloudformation:ListStackResources
+                  - cloudformation:ValidateTemplate
+                Resource: '*'
+
+  MCPInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref MCPInstanceRole
+
+  MCPSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow all traffic
+      VpcId: !Ref MCPVPC
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: MCP-SecurityGroup
+
+  MCPInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Strands-workshop
+      InstanceType: t3.large
+      ImageId: !Sub '{{resolve:ssm:/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id}}'
+      SubnetId: !Ref MCPPublicSubnet
+      SecurityGroupIds:
+        - !Ref MCPSecurityGroup
+      IamInstanceProfile: !Ref MCPInstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp3
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            # log
+            exec > >(tee /var/log/user-data.log|logger -t user-data) 2>&1
+
+            # update and install dependencies
+            sudo apt update
+            sudo apt install curl git python3 python3-pip wget unzip -y
+            pip3 install boto3 awscli
+
+            # install Docker docker-compose 
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo systemctl enable docker && sudo systemctl start docker && sudo usermod -aG docker ubuntu
+            sudo chmod 666 /var/run/docker.sock
+            sudo curl -SL https://github.com/docker/compose/releases/download/v2.35.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+            sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+            # clone repo
+            su - ubuntu -c '
+              cd ~
+              git clone https://github.com/aws-samples/sample_agentic_ai_strands -b agentcore
+            '
+
+            # 为ubuntu用户专门安装和配置工具
+            su - ubuntu -c '
+              # 安装NVM
+              curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+              
+              # 立即加载NVM配置以便在脚本中使用
+              export NVM_DIR="$HOME/.nvm"
+              [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+              
+              # 安装Node.js
+              nvm install 22.12.0
+              nvm alias default 22.12.0
+              
+              # 安装uv
+              curl -LsSf https://astral.sh/uv/install.sh | sh
+              
+              # 确保.cargo/bin在PATH中并能立即使用
+              export PATH="$HOME/.cargo/bin:$PATH"
+              source $HOME/.cargo/env
+              
+              # 验证安装
+              echo "Node version: $(node -v)"
+              echo "UV version: $(uv --version || echo \"UV not found in PATH\")"
+              
+              # shell config
+              echo "export NVM_DIR=\"\$HOME/.nvm\"" >> $HOME/.bashrc
+              echo "[ -s \"\$NVM_DIR/nvm.sh\" ] && \\. \"\$NVM_DIR/nvm.sh\"" >> $HOME/.bashrc
+              echo "[ -s \"\$NVM_DIR/bash_completion\" ] && \\. \"\$NVM_DIR/bash_completion\"" >> $HOME/.bashrc
+              echo "export PATH=\"\$HOME/.cargo/bin:\$PATH\"" >> $HOME/.bashrc
+              echo "export PATH=\"\$(npm config get prefix)/bin:\$PATH\"" >> $HOME/.bashrc
+            '
+            # 安装 Rust
+            chown -R ubuntu:ubuntu /home/ubuntu/.nvm /home/ubuntu/.cargo
+
+            # Configure AWS CLI for ubuntu user (using IAM instance role)
+            sudo -u ubuntu mkdir -p /home/ubuntu/.aws
+            cat << EOF > /home/ubuntu/.aws/config
+            [default]
+            region=${AWS::Region}
+            output=json
+            EOF
+
+            # Set proper ownership and permissions
+            chown ubuntu:ubuntu /home/ubuntu/.aws/config
+            chmod 600 /home/ubuntu/.aws/config
+
+            # restart service
+            systemctl restart code-server
+          
+Outputs:
+  InstanceId:
+    Description: Instance ID of the newly created EC2 instance
+    Value: !Ref MCPInstance
+  PublicDNS:
+    Description: Public DNSName of the newly created EC2 instance
+    Value: !GetAtt MCPInstance.PublicDnsName
+  PublicIP:
+    Description: Public IP address of the newly created EC2 instance
+    Value: !GetAtt MCPInstance.PublicIp

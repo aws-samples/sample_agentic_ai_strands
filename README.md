@@ -55,9 +55,13 @@
 2. Gateway和MCP runtime OAuth鉴权
 
 
-## 2.安装方法 （需要Arm64架构的linux系统，如Mac，或者Graviton EC2）
-### 2.1. 依赖安装
+## 2.安装方法
+### 方法1:使用cloudformation安装预置环境
+使用该[cloudformation模板](./cfn.yml)创建一台ec2，这台ec2中会自动下载代码，安装好依赖环境。 登陆ec2后，进入`sample_agentic_ai_strands/agentcore_scripts/`开始后续安装，具体参考步骤2.4
 
+
+### 方法2:完全手动安装方法
+### 2.1. 手动依赖安装
 目前主流 MCP Server 基于 NodeJS 或者 Python 开发实现并运行于用户 PC 上，因此用户 PC 需要安装这些依赖。
 
 ### 2.1 NodeJS
@@ -93,7 +97,7 @@ ln -s /usr/bin/docker-compose  /usr/local/bin/docker-compose
 ### 2.4 创建cognito
 下载克隆该项目后, 进入`agentcore_scripts/`目录下，运行脚本，创建iam role, cognito userpool, agentcore memory.  
 ```bash
-cd agentcore_scripts/
+cd sample_agentic_ai_strands/agentcore_scripts/
 bash run_setup.sh
 ```
 运行完成后会在`agentcore_scripts/`目录下生成`.env_setup`，项目根目录下生成`.env`和`.bedrock_agentcore.yaml`, 三个文件。
@@ -120,7 +124,7 @@ uv sync
 ```
 
 ### 2.6 部署AgentCore Runtime
-运行agentcore cli部署runtime（注意需要在arm环境中）
+运行agentcore cli部署runtime
 ```bash
 uv run agentcore launch
 ```

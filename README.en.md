@@ -52,7 +52,12 @@ Unified identity provider through Cognito UserPool using the same pool and clien
 1. Web frontend user authentication
 2. Gateway and MCP runtime OAuth authentication
 
-## 2. Installation (Requires Arm64 Linux architecture, e.g., Mac or Graviton EC2)
+## 2. Installation 
+### Method 1: Installing Pre-configured Environment Using CloudFormation
+Utilize the provided [CloudFormation template](./cfn.yml) to provision an EC2 instance that will automatically download the codebase and install the requisite dependencies.   
+Upon accessing the EC2 instance, navigate to `sample_agentic_ai_strands/agentcore_scripts/` to commence subsequent installation procedures, as detailed in step 2.4.
+
+### Method 2: Comprehensive Manual Installation Approach
 ### 2.1. Dependencies
 
 Most MCP Servers are developed using NodeJS or Python and run on users' PCs, requiring these dependencies.
@@ -71,7 +76,7 @@ First, install the Python package management tool `uv` by following the [officia
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### 2.3 Docker (Optional)
+### 2.3 Docker
 - Install Docker and Docker Compose: https://docs.docker.com/get-docker/
 - Linux Docker installation commands:
 ```bash
