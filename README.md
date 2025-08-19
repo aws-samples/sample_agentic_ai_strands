@@ -127,7 +127,9 @@ uv sync
 ```bash
 uv run agentcore launch
 ```
-部署完成后，在控制台会看到 `Agent ARN`，请使用vim 打开`.env`文件编辑，把arn配置到以下环境变量中。
+
+### 2.7 设置 AgentCore ARN变量
+部署完成后，在控制台会看到 `Agent ARN`，请使用vim 打开`.env`文件编辑，把arn配置到以下环境变量中。 
 例如：  
 ```bash
 AGENTCORE_RUNTIME_ARN=arn:aws:bedrock-agentcore:us-west-2:xxxx:runtime/xxxxx

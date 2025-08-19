@@ -129,6 +129,7 @@ Launch the AgentCore runtime using the CLI (requires ARM environment):
 uv run agentcore launch
 ```
 
+### 2.7 Set AgentCore ARN in .env
 After successful deployment, note the `Agent ARN` from the console output and edit the `.env` file to add the ARN to the following environment variable:
 
 Example:
