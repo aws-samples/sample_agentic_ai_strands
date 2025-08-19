@@ -214,10 +214,10 @@ Resources:
                   - ecs:TagResource
                   - ecs:UntagResource
                   - ecs:ListTagsForResource
-                  - ecs:ListServices
                 Resource:
                   - arn:aws:ecs:*:*:service/strands-agentcore-*/strands-agentcore-*
                   - arn:aws:ecs:*:*:service/strands-mcp-app-*/strands-mcp-app-*
+                  - arn:aws:ecs:*:*:service/strands-agentcore-cluster/*
               - Sid: ECSTaskDefinitionPermissions
                 Effect: Allow
                 Action:
