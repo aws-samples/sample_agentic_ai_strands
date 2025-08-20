@@ -36,14 +36,11 @@ ENV DOCKER_CONTAINER=1
 
 # RUN python -m pip install aws_opentelemetry_distro_genai_beta>=0.1.2
 
+# 修改默认超时为120s
+RUN \
+export PYTHON_SITEPACKAGES=`.venv/bin/python3 -c "import site; print(site.getsitepackages()[0])"`; \
+sed -i 's/raise ValueError("Agent callbacks are not supported for Swarm agents yet.")/return None/g'  ${PYTHON_SITEPACKAGES}/strands/multiagent/swarm.py
 
-# Create non-root user
-# RUN useradd -m -u 1000 bedrock_agentcore
-
-# Change ownership of the virtual environment to the non-root user
-# RUN chown -R bedrock_agentcore:bedrock_agentcore /app/.venv
-
-# USER bedrock_agentcore
 
 EXPOSE 8080
 
