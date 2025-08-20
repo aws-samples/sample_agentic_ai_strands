@@ -246,7 +246,7 @@ if __name__ == '__main__':
         print(f"Account ID:      {repo_info['account_id']}")
         
         # Generate Docker login command
-        login_command = get_ecr_login_command(REGION)
+        login_command = get_ecr_login_command()
         if login_command:
             print("\n" + "-" * 60)
             print("Docker Login Command:")
