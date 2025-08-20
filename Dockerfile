@@ -44,8 +44,6 @@ sed -i 's/raise ValueError("Agent callbacks are not supported for Swarm agents y
 
 EXPOSE 8080
 
-# CMD [".venv/bin/opentelemetry-instrument", ".venv/bin/python3", "src/agentcore_runtime.py"]
-CMD [".venv/bin/python3", "src/agentcore_runtime.py"]
-# CMD ["uv", "run","opentelemetry-instrument", "python", "src/agentcore_runtime.py"]
-# CMD ["uv", "run", "src/agentcore_runtime.py"]
+CMD [".venv/bin/opentelemetry-instrument", ".venv/bin/python3", "src/agentcore_runtime.py"]
+# CMD [".venv/bin/python3", "src/agentcore_runtime.py"]
 
