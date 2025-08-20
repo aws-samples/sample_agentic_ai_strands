@@ -230,11 +230,10 @@ if __name__ == '__main__':
     
     # Configuration parameters
     REPOSITORY_NAME = "bedrock_agentcore-agent_runtime"
-    REGION = "us-west-2"
     
     # Create ECR repository
     print(f"Creating ECR repository: {REPOSITORY_NAME}")
-    repo_info = setup_ecr_repository_with_policy(REPOSITORY_NAME, REGION)
+    repo_info = setup_ecr_repository_with_policy(REPOSITORY_NAME)
     
     if repo_info:
         print("\n" + "=" * 60)
