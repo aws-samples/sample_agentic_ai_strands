@@ -158,6 +158,9 @@ run CDK deploy
 ./cdk-build-and-deploy.sh
 ```
 
+Following the deployment completion, an Application Load Balancer (ALB) address becomes visible within the script, which can be accessed via web browser to launch the application interface.
+
+The default credentials consist of username `testuser` and password `MyPassword123!`. Alternatively, users may register new accounts utilizing their email addresses as prompted by the interface.
 
 ![img](assets/ecs_fargate_architecture.png)
 

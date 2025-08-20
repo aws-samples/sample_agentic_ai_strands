@@ -156,6 +156,10 @@ npx cdk bootstrap
 ./cdk-build-and-deploy.sh
 ```
 
+部署完成之后，从脚本中可以看到一个ALB地址，用浏览器访问这个地址可以打开页面。  
+
+默认用户名和密码是`testuser`, `MyPassword123!`，也可以根据页面提示用自己的邮箱注册新用户。
+
 ![img](assets/ecs_fargate_architecture.png)
  这个Demo的部署架构遵循AWS最佳实践，将应用程序部署在私有子网中，通过负载均衡器提供公共访问，并使用Fargate实现无服务器容器管理。 这个部署架构包含以下主要亚马逊云组件：
 1. ECS Cluster：
