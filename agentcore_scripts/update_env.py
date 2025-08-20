@@ -221,6 +221,41 @@ def update_yaml_template(yaml_file_path: str, env_vars: Dict[str, str]) -> bool:
                 yaml_data['agents']['agent_runtime']['aws']['ecr_repository'] = ecr_repository
                 updates_made.append('ecr_repository')
         
+        # Update region - try multiple sources
+        region = None
+        print("DEBUG: Attempting to determine AWS region...")
+        
+        # Method 1: Extract from ECR_REPOSITORY_URI
+        if 'ECR_REPOSITORY_URI' in env_vars:
+            ecr_uri = env_vars['ECR_REPOSITORY_URI']
+            print(f"DEBUG: Found ECR_REPOSITORY_URI: {ecr_uri}")
+            # ECR URI format: <account-id>.dkr.ecr.<region>.amazonaws.com/<repo-name>
+            ecr_match = re.search(r'\.dkr\.ecr\.([^.]+)\.amazonaws\.com', ecr_uri)
+            if ecr_match:
+                region = ecr_match.group(1)
+                print(f"DEBUG: Extracted region from ECR URI: {region}")
+        
+        # Method 2: Check environment variables
+        if not region:
+            for region_var in ['AWS_DEFAULT_REGION', 'AWS_REGION', 'REGION']:
+                if region_var in env_vars:
+                    region = env_vars[region_var]
+                    print(f"DEBUG: Found region from {region_var}: {region}")
+                    break
+        
+        # Method 3: Default fallback
+        if not region:
+            region = 'us-west-2'  # Default region as used in setup_ecr.py
+            print(f"DEBUG: Using default region: {region}")
+        
+        # Update region in YAML
+        if region and 'agents' in yaml_data and 'agent_runtime' in yaml_data['agents']:
+            if 'aws' not in yaml_data['agents']['agent_runtime']:
+                yaml_data['agents']['agent_runtime']['aws'] = {}
+            yaml_data['agents']['agent_runtime']['aws']['region'] = region
+            updates_made.append('region')
+            print(f"Updated region: {region}")
+        
         if updates_made:
             # Write updated YAML back to file
             with open(yaml_file_path, 'w', encoding='utf-8') as f:
