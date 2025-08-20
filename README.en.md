@@ -5,7 +5,7 @@
 This comprehensive Agentic AI application built with Strands Agents SDK demonstrates how to integrate AgentCore Memory, Identity, Code Interpreter, Browser, and MCP/Gateway on the AgentCore Runtime. It implements a versatile personal assistant in both standalone Agent and Swarm modes. Bedrock AgentCore serves as the core engine, providing powerful Agent capabilities and tool integration mechanisms that make the entire system highly extensible and practical.
 
 ### 1.1. System Architecture
-![system](assets/agentcore_arc.png)
+![system](assets/arc_atc_en.png)
 
 The application consists of a web frontend and backend services, both containerized and deployed to Amazon ECS Fargate with external access provided through an Application Load Balancer (ALB). The backend services support web client operations such as user session creation, model selection, MCP tool selection, and system prompt configuration. These services receive requests from the web client and forward tasks to the Agent Runtime, where Agents determine whether to invoke browsers, code interpreters, MCP tools running on MCP Runtime, or additional MCP tools exposed through Gateway based on user requirements.
 
