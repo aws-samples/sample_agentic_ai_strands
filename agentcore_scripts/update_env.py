@@ -10,6 +10,13 @@ import re
 import yaml
 from typing import Dict, List, Tuple
 
+try:
+    import boto3
+    from botocore.exceptions import NoCredentialsError, ClientError
+    BOTO3_AVAILABLE = True
+except ImportError:
+    BOTO3_AVAILABLE = False
+
 
 def parse_env_file(file_path: str) -> Dict[str, str]:
     """
@@ -56,6 +63,74 @@ def parse_env_file(file_path: str) -> Dict[str, str]:
         print(f"Error reading file {file_path}: {e}")
     
     return env_vars
+
+
+def get_actual_aws_region() -> str:
+    """
+    Get the actual AWS region using boto3
+    
+    Returns:
+        str: The current AWS region
+    """
+    if not BOTO3_AVAILABLE:
+        print("Warning: boto3 not available, cannot detect AWS region")
+        return None
+    
+    try:
+        # Try to get region from boto3 session
+        session = boto3.Session()
+        region = session.region_name
+        if region:
+            print(f"Detected AWS region from boto3 session: {region}")
+            return region
+        
+        # Try to get region from STS service (requires credentials)
+        try:
+            sts_client = boto3.client('sts')
+            # Get caller identity to determine the region from the endpoint
+            response = sts_client.get_caller_identity()
+            # Extract region from the ARN if available
+            if 'Arn' in response:
+                arn_parts = response['Arn'].split(':')
+                if len(arn_parts) > 3:
+                    region = arn_parts[3]
+                    if region:
+                        print(f"Detected AWS region from STS ARN: {region}")
+                        return region
+        except (NoCredentialsError, ClientError) as e:
+            print(f"Could not determine region from STS: {e}")
+        
+        # Try to get region from EC2 metadata (if running on EC2)
+        try:
+            ec2_client = boto3.client('ec2')
+            region = ec2_client.meta.region_name
+            if region:
+                print(f"Detected AWS region from EC2 client: {region}")
+                return region
+        except Exception as e:
+            print(f"Could not determine region from EC2 metadata: {e}")
+        
+        # Try to get from AWS config
+        try:
+            import configparser
+            import os.path
+            
+            aws_config_path = os.path.expanduser('~/.aws/config')
+            if os.path.exists(aws_config_path):
+                config = configparser.ConfigParser()
+                config.read(aws_config_path)
+                if 'default' in config and 'region' in config['default']:
+                    region = config['default']['region']
+                    print(f"Detected AWS region from AWS config file: {region}")
+                    return region
+        except Exception as e:
+            print(f"Could not read AWS config file: {e}")
+            
+    except Exception as e:
+        print(f"Error detecting AWS region: {e}")
+    
+    print("Could not detect AWS region, using default: us-east-1")
+    return 'us-east-1'
 
 
 def read_env_file_lines(file_path: str) -> List[str]:
@@ -245,7 +320,7 @@ def update_yaml_template(yaml_file_path: str, env_vars: Dict[str, str]) -> bool:
         
         # Method 3: Default fallback
         if not region:
-            region = 'us-west-2'  # Default region as used in setup_ecr.py
+            region = 'us-east-1'  # Default region as used in setup_ecr.py
             print(f"DEBUG: Using default region: {region}")
         
         # Update region in YAML
@@ -306,6 +381,16 @@ def main():
     if not setup_vars:
         print("Error: No valid environment variables found in configuration file")
         return 1
+    
+    # Detect actual AWS region and add it to setup variables
+    print("Detecting actual AWS region...")
+    actual_region = get_actual_aws_region()
+    if actual_region:
+        setup_vars['AWS_REGION'] = actual_region
+        setup_vars['AGENTCORE_REGION'] = actual_region
+        print(f"Will update AWS_REGION and AGENTCORE_REGION to: {actual_region}")
+    else:
+        print("Warning: Could not detect AWS region, skipping region update")
     
     print(f"Read {len(setup_vars)} environment variables from configuration file:")
     for key, value in setup_vars.items():
