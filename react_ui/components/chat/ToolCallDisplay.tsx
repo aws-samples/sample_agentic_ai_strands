@@ -203,7 +203,8 @@ export function ToolCallDisplay({ toolCall, className }: ToolCallDisplayProps) {
                       fontSize: '10px'
                     } as any}
                   >
-                    {JSON.stringify(toolCall.arguments, null, 2)}
+                    {/* {JSON.stringify(toolCall.arguments, null, 2)} */}
+                    {toolCall.arguments}
                   </SyntaxHighlighter>
                 </div>
               )}
@@ -260,7 +261,7 @@ export function ToolCallDisplay({ toolCall, className }: ToolCallDisplayProps) {
                           }
                         }}
                       >
-                        {toolCall.result}
+                      {toolCall.result}
                       </ReactMarkdown>
                     ) : (
                       <SyntaxHighlighter
