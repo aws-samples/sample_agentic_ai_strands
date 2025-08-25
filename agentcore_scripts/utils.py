@@ -194,7 +194,7 @@ def setup_memclient():
         # Cleanup on error - delete the memory if it was partially created
         if memory_id:
             try:
-                client.delete_memory_and_wait(memoryId=memory_id,max_wait = 300)
+                client.delete_memory_and_wait(memory_id=memory_id,max_wait = 300)
                 print(f"Cleaned up memory: {memory_id}")
             except Exception as cleanup_error:
                 print(f"Failed to clean up memory: {cleanup_error}")
