@@ -30,6 +30,7 @@ RUN mkdir docs
 # RUN uv pip install --system -r requirements.txt
 RUN uv sync 
 # RUN uv pip install git+https://github.com/xiehust/sdk-python.git@dev
+RUN git clone https://github.com/aws-samples/aws-mcp-servers-samples -b main
 
 # Signal that this is running in Docker for host binding logic
 ENV DOCKER_CONTAINER=1
