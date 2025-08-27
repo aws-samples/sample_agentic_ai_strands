@@ -103,7 +103,7 @@ async def live_view_with_browser_use(prompt,client:BrowserClient, model_id:str ,
         ws_url, headers = client.generate_ws_headers()
 
         # Step 2: Start viewer server
-        logger.info("tarting viewer server...")
+        logger.info("starting viewer server...")
 
         # Step 4: Use browser-use to interact with browser
         # Create persistent browser session and model

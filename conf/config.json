@@ -1,6 +1,10 @@
 {
 	"models": [
-			{
+				{
+			"model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+			"model_name": "Claude 3.7 Sonnet"
+		},
+		{
 			"model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0",
 			"model_name": "Claude 4 Sonnet"
 		},
@@ -9,20 +13,16 @@
 			"model_name": "Claude 4 Opus"
 		},
 		{
-			"model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
-			"model_name": "Claude 3.7 Sonnet"
-		},
-		{
 			"model_id": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
 			"model_name": "Claude 3.5 Sonnet v2"
 		},
 	    {
 			"model_id": "openai.gpt-oss-120b-1:0",
-			"model_name": "openai.gpt-oss-120b"
+			"model_name": "GPT-OSS-120B"
 		},
 		{
 			"model_id": "openai.gpt-oss-20b-1:0",
-			"model_name": "openai.gpt-oss-20b"
+			"model_name": "GPT-OSS-120B"
 		},
 		{
 			"model_id": "us.amazon.nova-premier-v1:0",
@@ -35,50 +35,6 @@
 		{
 			"model_id": "us.amazon.nova-lite-v1:0",
 			"model_name": "Amazon Nova Lite v1"
-		},
-		{
-			"model_id": "Pro/deepseek-ai/DeepSeek-V3",
-			"model_name": "DeepSeek-V3-Pro"
-		},
-		{
-			"model_id": "deepseek-ai/DeepSeek-V3",
-			"model_name": "DeepSeek-V3-free"
-		},
-		{
-			"model_id": "deepseek-ai/DeepSeek-R1/wvvkzheh2i",
-			"model_name": "DeepSeek-R1-New"
-		},
-		{
-			"model_id": "Pro/deepseek-ai/DeepSeek-R1",
-			"model_name": "DeepSeek-R1-Pro"
-		},
-		{
-			"model_id": "deepseek-ai/DeepSeek-R1",
-			"model_name": "DeepSeek-R1-free"
-		},
-		{
-			"model_id": "deepseek-r1-250528",
-			"model_name": "DeepSeek-R1-0528-ark"
-		},
-		{
-			"model_id": "deepseek-v3-250324",
-			"model_name": "deepseek-v3-250324-ark"
-		},
-		{
-			"model_id": "deepseek-reasoner",
-			"model_name": "DeepSeek-R1-0528-official"
-		},
-		{
-			"model_id": "deepseek-chat",
-			"model_name": "DeepSeek-v3-official"
-		},
-				{
-			"model_id": "Qwen/Qwen3-235B-A22B",
-			"model_name": "Qwen3-235B-A22B"
-		},
-		{
-			"model_id": "Qwen/Qwen3-30B-A3B",
-			"model_name": "Qwen3-30B-A3B"
 		}
 	],
 	"mcpServers": {

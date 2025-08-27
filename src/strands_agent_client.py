@@ -18,7 +18,7 @@ from chat_client import ChatClient
 from mcp_client_strands import StrandsMCPClient
 from strands.agent.conversation_manager import SlidingWindowConversationManager
 from botocore.config import Config
-from custom_tools import mem0_memory
+# from custom_tools import mem0_memory
 from strands_tools.code_interpreter import AgentCoreCodeInterpreter
 from custom_tools.memory_hook import AgentMemoryHooks
 from multi_agents.research_swarm import DeepResearchSwarm
@@ -106,10 +106,11 @@ class StrandsAgentClient(ChatClient):
             if model_id in [CLAUDE_4_SONNET_MODEL_ID,CLAUDE_4_OPUS_MODEL_ID]:
                 additional_request_fields['anthropic_beta'] = ["interleaved-thinking-2025-05-14"]
             
+            cache_tools = None
+            cache_prompt= None
             if model_id in [CLAUDE_4_SONNET_MODEL_ID,CLAUDE_4_OPUS_MODEL_ID,CLAUDE_37_SONNET_MODEL_ID,CLAUDE_35_SONNET_MODEL_ID]:
                 cache_tools = "default"
-            else:
-                cache_tools = None
+                cache_prompt="default"
                 
             if model_id in [CLAUDE_4_SONNET_MODEL_ID,CLAUDE_4_OPUS_MODEL_ID,CLAUDE_37_SONNET_MODEL_ID] and thinking:
                 temperature = 1.0
@@ -118,7 +119,7 @@ class StrandsAgentClient(ChatClient):
                 model_id=model_id,
                 boto_session=session,
                 cache_tools=cache_tools,
-                cache_prompt="default",
+                cache_prompt=cache_prompt,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 boto_client_config=Config(
@@ -308,7 +309,8 @@ class StrandsAgentClient(ChatClient):
         # 如果配置了PG Database,添加memory tool
         if use_mem:
             if os.environ.get("POSTGRESQL_HOST"): 
-                tools += [mem0_memory]
+                # tools += [mem0_memory]
+                tools += []
             elif memory_id:=os.environ.get("MEMORY_ID"): # 使用agentcore memory
                 # 使用 memory hooks 
                 # 单用户单session
@@ -332,9 +334,10 @@ class StrandsAgentClient(ChatClient):
             tools += [self.code_interpreter.code_interpreter]
         
         if use_browser:
-            # self.browser = BrowserMCPClient(region=os.environ.get("AGENTCORE_REGION","us-west-2"))
-            # self.browser.start()
-            self.browser = BrowserUseTool(region=os.environ.get("AGENTCORE_REGION","us-west-2"),model_id=model_id,use_vision=True)
+            use_vision = True
+            if 'gpt-oss' in model_id:
+                use_vision = False
+            self.browser = BrowserUseTool(region=os.environ.get("AGENTCORE_REGION","us-west-2"),model_id=model_id,use_vision=use_vision)
             tools += self.browser.tools        
         logger.info(f"load tools:{[tool.tool_name for tool in tools]}")
         # Create agent

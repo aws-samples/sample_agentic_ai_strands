@@ -70,10 +70,10 @@ class StrandsMCPClient:
                 # HTTP-based server
                 if http_type == 'sse':
                     headers = {"Authorization": f"Bearer {token}"} if token else None
-                    mcp_client = MCPClient(lambda: sse_client(server_url, headers=headers))
+                    mcp_client = MCPClient(lambda: sse_client(server_url, headers=headers),startup_timeout=60)
                 elif http_type == 'streamable_http':
                     headers = {"Authorization": f"Bearer {token}"} if token else None
-                    mcp_client = MCPClient(lambda: streamablehttp_client(server_url, headers=headers))
+                    mcp_client = MCPClient(lambda: streamablehttp_client(server_url, headers=headers),startup_timeout=60)
                 else:
                     raise ValueError(f"Unsupported HTTP transport type: {http_type}")
             else:
