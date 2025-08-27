@@ -8,21 +8,13 @@
 			"model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0",
 			"model_name": "Claude 4 Sonnet"
 		},
-		{
-			"model_id": "us.anthropic.claude-opus-4-20250514-v1:0",
-			"model_name": "Claude 4 Opus"
-		},
-		{
-			"model_id": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
-			"model_name": "Claude 3.5 Sonnet v2"
-		},
 	    {
 			"model_id": "openai.gpt-oss-120b-1:0",
 			"model_name": "GPT-OSS-120B"
 		},
 		{
 			"model_id": "openai.gpt-oss-20b-1:0",
-			"model_name": "GPT-OSS-120B"
+			"model_name": "GPT-OSS-20B"
 		},
 		{
 			"model_id": "us.amazon.nova-premier-v1:0",
@@ -31,10 +23,6 @@
 		{
 			"model_id": "us.amazon.nova-pro-v1:0",
 			"model_name": "Amazon Nova Pro v1"
-		},
-		{
-			"model_id": "us.amazon.nova-lite-v1:0",
-			"model_name": "Amazon Nova Lite v1"
 		}
 	],
 	"mcpServers": {
