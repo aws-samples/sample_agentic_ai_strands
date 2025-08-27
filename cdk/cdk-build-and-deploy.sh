@@ -2,109 +2,109 @@
 
 set -e
 
-# 完整的 CDK 构建和部署脚本
-echo "开始完整的 CDK 构建和部署流程..."
+# Complete CDK build and deployment script
+echo "Starting complete CDK build and deployment process..."
 
-# 检查.env文件是否存在
+# Check if .env file exists
 if [ ! -f "../.env" ]; then
-    echo "错误: .env 文件不存在，请先创建 .env 文件"
+    echo "Error: .env file does not exist, please create .env file first"
     exit 1
 fi
 
-# 读取.env文件
+# Read .env file
 set -a
 source ../.env
 set +a
 export NODE_ENV=production
-# 配置变量
+# Configuration variables
 REGION="${AWS_REGION:-cn-northwest-1}"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 PREFIX="strands-agentcore"
 PLATFORM="${PLATFORM:-linux/arm64}"
-# Mem0 配置 - 从环境变量读取，默认启用
+# Mem0 configuration - read from environment variables, enabled by default
 ENABLE_MEM0="${ENABLE_MEM0:-true}"
 export CDK_DEFAULT_REGION=$REGION
 export CDK_DEFAULT_ACCOUNT=$ACCOUNT_ID
 export ENABLE_MEM0=$ENABLE_MEM0
-# 检测是否为中国区域
+# Detect if it's China region
 if [[ $REGION == cn-* ]]; then
     IS_CHINA_REGION=true
     ECR_DOMAIN="amazonaws.com.cn"
     CONSOLE_DOMAIN="console.amazonaws.cn"
-    echo "检测到中国区域: $REGION"
+    echo "Detected China region: $REGION"
 else
     IS_CHINA_REGION=false
     ECR_DOMAIN="amazonaws.com"
     CONSOLE_DOMAIN="console.aws.amazon.com"
-    echo "检测到全球区域: $REGION"
+    echo "Detected global region: $REGION"
 fi
 
-echo "使用 AWS 账户: $ACCOUNT_ID"
-echo "使用区域: $REGION"
+echo "Using AWS Account: $ACCOUNT_ID"
+echo "Using Region: $REGION"
 echo "PLATFORM: $PLATFORM"
-echo "ECR 域名: $ECR_DOMAIN"
-echo "Mem0 功能: $ENABLE_MEM0"
+echo "ECR Domain: $ECR_DOMAIN"
+echo "Mem0 Feature: $ENABLE_MEM0"
 
-# 1. 创建或获取 ECR 仓库
+# 1. Create or get ECR repositories
 echo "========================================="
-echo "步骤 1: 创建 ECR 仓库"
+echo "Step 1: Create ECR repositories"
 echo "========================================="
 
-# 创建前端 ECR 仓库
-echo "创建前端 ECR 仓库..."
+# Create frontend ECR repository
+echo "Creating frontend ECR repository..."
 aws ecr create-repository \
     --repository-name ${PREFIX}-frontend \
-    --region $REGION 2>/dev/null || echo "前端 ECR 仓库已存在"
+    --region $REGION 2>/dev/null || echo "Frontend ECR repository already exists"
 
-# 创建后端 ECR 仓库
-echo "创建后端 ECR 仓库..."
+# Create backend ECR repository
+echo "Creating backend ECR repository..."
 aws ecr create-repository \
     --repository-name ${PREFIX}-backend \
-    --region $REGION 2>/dev/null || echo "后端 ECR 仓库已存在"
+    --region $REGION 2>/dev/null || echo "Backend ECR repository already exists"
 
-# 获取 ECR 仓库 URI
+# Get ECR repository URIs
 FRONTEND_ECR="$ACCOUNT_ID.dkr.ecr.$REGION.$ECR_DOMAIN/${PREFIX}-frontend"
 BACKEND_ECR="$ACCOUNT_ID.dkr.ecr.$REGION.$ECR_DOMAIN/${PREFIX}-backend"
 
-echo "ECR 仓库准备完成："
-echo "- 前端 ECR: $FRONTEND_ECR"
-echo "- 后端 ECR: $BACKEND_ECR"
+echo "ECR repositories ready:"
+echo "- Frontend ECR: $FRONTEND_ECR"
+echo "- Backend ECR: $BACKEND_ECR"
 
-# 2. 构建和推送 Docker 镜像
+# 2. Build and push Docker images
 echo "========================================="
-echo "步骤 2: 构建和推送 Docker 镜像"
+echo "Step 2: Build and push Docker images"
 echo "========================================="
 
-# 登录到 ECR
-echo "登录到 ECR..."
+# Login to ECR
+echo "Logging into ECR..."
 aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.$ECR_DOMAIN
 
-# 检测当前系统架构
+# Detect current system architecture
 CURRENT_ARCH=$(uname -m)
-echo "当前系统架构: $CURRENT_ARCH"
-echo "目标平台: $PLATFORM"
+echo "Current system architecture: $CURRENT_ARCH"
+echo "Target platform: $PLATFORM"
 
-# 判断是否需要使用 buildx
+# Determine if buildx is needed
 USE_BUILDX=true
 case "$CURRENT_ARCH" in
     "x86_64"|"amd64")
         if [[ "$PLATFORM" == "linux/amd64" || "$PLATFORM" == "linux/x86" ]]; then
             USE_BUILDX=false
-            echo "✅ 当前架构与目标平台匹配，使用原生 docker build"
+            echo "✅ Current architecture matches target platform, using native docker build"
         fi
         ;;
     "aarch64"|"arm64")
         if [[ "$PLATFORM" == "linux/arm64" ]]; then
             USE_BUILDX=false
-            echo "✅ 当前架构与目标平台匹配，使用原生 docker build"
+            echo "✅ Current architecture matches target platform, using native docker build"
         fi
         ;;
 esac
 
 if [[ "$USE_BUILDX" == true ]]; then
-    echo "⚠️ 当前架构与目标平台不匹配，使用 docker buildx"
+    echo "⚠️ Current architecture doesn't match target platform, using docker buildx"
     BUILDER_NAME="mybuilder"
-    echo "检查Docker buildx builder '$BUILDER_NAME' 是否已经存在..."
+    echo "Checking if Docker buildx builder '$BUILDER_NAME' already exists..."
     # Check if the builder exists
     if docker buildx ls | grep -q "$BUILDER_NAME"; then
         echo "Builder '$BUILDER_NAME' exists. Skip it..."
@@ -114,15 +114,15 @@ if [[ "$USE_BUILDX" == true ]]; then
     fi
 fi
 
-# 构建前端镜像
-echo "构建前端镜像..."
+# Build frontend image
+echo "Building frontend image..."
 cd ../react_ui
 # cp .env.example .env.local
 
 if [[ "$USE_BUILDX" == true ]]; then
-    # 使用 buildx 跨架构构建
+    # Use buildx for cross-architecture build
     if [[ $IS_CHINA_REGION == true ]]; then
-        echo "使用中国镜像源构建前端镜像（buildx）..."
+        echo "Building frontend image with China mirror (buildx)..."
         docker buildx build --platform "$PLATFORM" \
             --build-arg USE_CHINA_MIRROR=true \
             --build-arg PLATFORM="$PLATFORM" \
@@ -131,7 +131,7 @@ if [[ "$USE_BUILDX" == true ]]; then
             --build-arg AWS_REGION="${AWS_REGION}" \
             --load -t ${PREFIX}-frontend:latest .
     else
-        echo "构建前端镜像（buildx）..."
+        echo "Building frontend image (buildx)..."
         docker buildx build --platform "$PLATFORM" \
             --build-arg PLATFORM="$PLATFORM" \
             --build-arg COGNITO_USER_POOL_ID="${COGNITO_USER_POOL_ID}" \
@@ -140,9 +140,9 @@ if [[ "$USE_BUILDX" == true ]]; then
             --load -t ${PREFIX}-frontend:latest .
     fi
 else
-    # 使用原生 docker build
+    # Use native docker build
     if [[ $IS_CHINA_REGION == true ]]; then
-        echo "使用中国镜像源构建前端镜像（native）..."
+        echo "Building frontend image with China mirror (native)..."
         docker build --build-arg USE_CHINA_MIRROR=true \
             --build-arg PLATFORM="$PLATFORM" \
             --build-arg COGNITO_USER_POOL_ID="${COGNITO_USER_POOL_ID}" \
@@ -150,7 +150,7 @@ else
             --build-arg AWS_REGION="${AWS_REGION}" \
             -t ${PREFIX}-frontend:latest .
     else
-        echo "构建前端镜像（native）..."
+        echo "Building frontend image (native)..."
         docker build --build-arg PLATFORM="$PLATFORM" \
             --build-arg COGNITO_USER_POOL_ID="${COGNITO_USER_POOL_ID}" \
             --build-arg COGNITO_CLIENT_ID="${COGNITO_CLIENT_ID}" \
@@ -163,15 +163,15 @@ docker tag ${PREFIX}-frontend:latest $FRONTEND_ECR:latest
 docker push $FRONTEND_ECR:latest
 cd ..
 
-echo "前端镜像推送完成: $FRONTEND_ECR:latest"
+echo "Frontend image push completed: $FRONTEND_ECR:latest"
 
-# 构建后端镜像
-echo "构建后端镜像..."
+# Build backend image
+echo "Building backend image..."
 
 if [[ "$USE_BUILDX" == true ]]; then
-    # 使用 buildx 跨架构构建
+    # Use buildx for cross-architecture build
     if [[ $IS_CHINA_REGION == true ]]; then
-        echo "使用中国镜像源构建后端镜像（buildx）..."
+        echo "Building backend image with China mirror (buildx)..."
         docker buildx build --platform "$PLATFORM" \
             --build-arg USE_CHINA_MIRROR=true \
             --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
@@ -180,7 +180,7 @@ if [[ "$USE_BUILDX" == true ]]; then
             --build-arg AWS_DEFAULT_REGION="${AWS_REGION}" \
             --load -t ${PREFIX}-backend:latest -f Dockerfile.backend .
     else
-        echo "构建后端镜像（buildx）..."
+        echo "Building backend image (buildx)..."
         docker buildx build --platform "$PLATFORM" \
             --build-arg PLATFORM="$PLATFORM" \
             --build-arg AWS_REGION="${AWS_REGION}" \
@@ -188,9 +188,9 @@ if [[ "$USE_BUILDX" == true ]]; then
             --load -t ${PREFIX}-backend:latest -f Dockerfile.backend .
     fi
 else
-    # 使用原生 docker build
+    # Use native docker build
     if [[ $IS_CHINA_REGION == true ]]; then
-        echo "使用中国镜像源构建后端镜像（native）..."
+        echo "Building backend image with China mirror (native)..."
         docker build --build-arg USE_CHINA_MIRROR=true \
             --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
             --build-arg PLATFORM="$PLATFORM" \
@@ -198,7 +198,7 @@ else
             --build-arg AWS_DEFAULT_REGION="${AWS_REGION}" \
             -t ${PREFIX}-backend:latest -f Dockerfile.backend .
     else
-        echo "构建后端镜像（native）..."
+        echo "Building backend image (native)..."
         docker build --build-arg PLATFORM="$PLATFORM" \
             --build-arg AWS_REGION="${AWS_REGION}" \
             --build-arg AWS_DEFAULT_REGION="${AWS_REGION}" \
@@ -209,45 +209,45 @@ fi
 docker tag ${PREFIX}-backend:latest $BACKEND_ECR:latest
 docker push $BACKEND_ECR:latest
 
-echo "后端镜像推送完成: $BACKEND_ECR:latest"
+echo "Backend image push completed: $BACKEND_ECR:latest"
 
-# 3. 准备 CDK 环境
+# 3. Prepare CDK environment
 echo "========================================="
-echo "步骤 3: 准备 CDK 环境"
+echo "Step 3: Prepare CDK environment"
 echo "========================================="
 
 cd cdk
 
-# 安装依赖
-echo "安装 CDK 依赖..."
+# Install dependencies
+echo "Installing CDK dependencies..."
 # npm install -g typescript
 # npm install
 # npm i --save-dev @types/node
-# 构建 TypeScript
-echo "构建 TypeScript..."
+# Build TypeScript
+echo "Building TypeScript..."
 npm run build
 
-# Bootstrap CDK (如果需要)
-echo "检查 CDK Bootstrap..."
+# Bootstrap CDK (if needed)
+echo "Checking CDK Bootstrap..."
 if ! aws cloudformation describe-stacks --stack-name CDKToolkit --region $REGION &>/dev/null; then
-    echo "Bootstrap CDK 环境..."
+    echo "Bootstrapping CDK environment..."
     npx cdk bootstrap --region $REGION
 else
-    echo "CDK 已经 Bootstrap"
+    echo "CDK already bootstrapped"
 fi
 
 cd ..
 
-# 4. 更新 Secrets Manager
+# 4. Update Secrets Manager
 echo "========================================="
-echo "步骤 4: 更新 Secrets Manager 配置"
+echo "Step 4: Update Secrets Manager configuration"
 echo "========================================="
 
-echo "从 .env 文件更新 Secrets Manager..."
+echo "Updating Secrets Manager from .env file..."
 
-# 创建或更新 AWS 凭证
+# Create or update AWS credentials
 if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
-    echo "使用环境变量中的 AWS 凭证"
+    echo "Using AWS credentials from environment variables"
     aws secretsmanager create-secret \
         --name "${PREFIX}/aws-credentials" \
         --description "AWS Access Credentials" \
@@ -258,8 +258,8 @@ if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
         --secret-string "{\"AccessKeyId\":\"${AWS_ACCESS_KEY_ID}\",\"SecretAccessKey\":\"${AWS_SECRET_ACCESS_KEY}\"}" \
         --region $REGION
 fi
-# 创建或者更新 Bedrock AWS 凭证
-# 创建或更新 AWS 凭证
+# Create or update Bedrock AWS credentials
+# Create or update AWS credentials
 if [ -n "$BEDROCK_AWS_ACCESS_KEY_ID" ] && [ -n "$BEDROCK_AWS_SECRET_ACCESS_KEY" ]; then
     aws secretsmanager create-secret \
         --name "${PREFIX}/bedrock-aws-credentials" \
@@ -273,8 +273,8 @@ if [ -n "$BEDROCK_AWS_ACCESS_KEY_ID" ] && [ -n "$BEDROCK_AWS_SECRET_ACCESS_KEY" 
 fi
 
 if [ -z "$OPENAI_API_KEY" ]; then
-    echo "⚠️ OPENAI_API_KEY 未设置或为空"
-    # 创建或更新 OPENAI 兼容接口 API Key
+    echo "⚠️ OPENAI_API_KEY not set or empty"
+    # Create or update OpenAI compatible API Key
     aws secretsmanager create-secret \
         --name "${PREFIX}/strands-api-key" \
         --description "Strands API Key" \
@@ -285,7 +285,7 @@ if [ -z "$OPENAI_API_KEY" ]; then
         --secret-string "dummy" \
         --region $REGION
 else
-    # 创建或更新 OPENAI 兼容接口 API Key
+    # Create or update OpenAI compatible API Key
     aws secretsmanager create-secret \
         --name "${PREFIX}/strands-api-key" \
         --description "Strands API Key" \
@@ -298,8 +298,8 @@ else
 fi
 
 if [ -z "$OPENAI_BASE_URL" ]; then
-    echo "⚠️ OPENAI_BASE_URL 未设置或为空"
-    # 创建或更新 OPENAI 兼容接口 API Base
+    echo "⚠️ OPENAI_BASE_URL not set or empty"
+    # Create or update OpenAI compatible API Base
     aws secretsmanager create-secret \
         --name "${PREFIX}/strands-api-base" \
         --description "Strands API Base URL" \
@@ -310,7 +310,7 @@ if [ -z "$OPENAI_BASE_URL" ]; then
         --secret-string "dummy" \
         --region $REGION
 else
-    # 创建或更新 OPENAI 兼容接口 API Base
+    # Create or update OpenAI compatible API Base
     aws secretsmanager create-secret \
         --name "${PREFIX}/strands-api-base" \
         --description "Strands API Base URL" \
@@ -321,47 +321,17 @@ else
         --secret-string "${OPENAI_BASE_URL}" \
         --region $REGION
 fi
-# 创建或更新 Langfuse 配置
-# aws secretsmanager create-secret \
-#     --name "${PREFIX}/langfuse-host" \
-#     --description "Langfuse Host" \
-#     --secret-string "${LANGFUSE_HOST}" \
-#     --region $REGION 2>/dev/null || \
-# aws secretsmanager update-secret \
-#     --secret-id "${PREFIX}/langfuse-host" \
-#     --secret-string "${LANGFUSE_HOST}" \
-#     --region $REGION
 
-# aws secretsmanager create-secret \
-#     --name "${PREFIX}/langfuse-public-key" \
-#     --description "Langfuse Public Key" \
-#     --secret-string "${LANGFUSE_PUBLIC_KEY}" \
-#     --region $REGION 2>/dev/null || \
-# aws secretsmanager update-secret \
-#     --secret-id "${PREFIX}/langfuse-public-key" \
-#     --secret-string "${LANGFUSE_PUBLIC_KEY}" \
-#     --region $REGION
+echo "Secrets Manager configuration completed"
 
-# aws secretsmanager create-secret \
-#     --name "${PREFIX}/langfuse-secret-key" \
-#     --description "Langfuse Secret Key" \
-#     --secret-string "${LANGFUSE_SECRET_KEY}" \
-#     --region $REGION 2>/dev/null || \
-# aws secretsmanager update-secret \
-#     --secret-id "${PREFIX}/langfuse-secret-key" \
-#     --secret-string "${LANGFUSE_SECRET_KEY}" \
-#     --region $REGION
-
-echo "Secrets Manager 配置完成"
-
-# 5. 部署 CDK Stack（现在镜像已存在）
+# 5. Deploy CDK Stack (images are now ready)
 echo "========================================="
-echo "步骤 5: 部署 CDK Stack"
+echo "Step 5: Deploy CDK Stack"
 echo "========================================="
 
 cd cdk
-echo "部署 CDK Stack（镜像已准备就绪）..."
-echo "Mem0 功能设置: $ENABLE_MEM0"
+echo "Deploying CDK Stack (images are ready)..."
+echo "Mem0 feature setting: $ENABLE_MEM0"
 export AWS_ACCOUNT_ID=$ACCOUNT_ID
 export AWS_REGION=$REGION
 export ENABLE_MEM0=$ENABLE_MEM0
@@ -370,12 +340,12 @@ npx cdk deploy --require-approval never --region $REGION --context enableMem0=$E
 # 获取输出
 STACK_NAME="StrandsAgentsEcsFargateStack"
 
-# 等待 Stack 部署完成
-echo "等待 Stack 部署完成..."
+# Wait for Stack deployment to complete
+echo "Waiting for Stack deployment to complete..."
 aws cloudformation wait stack-create-complete --stack-name $STACK_NAME --region $REGION 2>/dev/null || \
 aws cloudformation wait stack-update-complete --stack-name $STACK_NAME --region $REGION 2>/dev/null || true
 
-# 获取部署输出
+# Get deployment outputs
 ALB_DNS=$(aws cloudformation describe-stacks \
     --stack-name $STACK_NAME \
     --region $REGION \
@@ -390,17 +360,17 @@ CLUSTER_NAME=$(aws cloudformation describe-stacks \
 
 cd ..
 
-echo "CDK Stack 部署完成："
+echo "CDK Stack deployment completed:"
 echo "- ALB DNS: $ALB_DNS"
-echo "- 集群名称: $CLUSTER_NAME"
+echo "- Cluster Name: $CLUSTER_NAME"
 SERVICES=$(aws ecs list-services --cluster $CLUSTER_NAME --region $REGION --query 'serviceArns[*]' --output text)
-# 解析服务名称
+# Parse service names
 FRONTEND_SERVICE=""
 BACKEND_SERVICE=""
 
 for service_arn in $SERVICES; do
     service_name=$(basename $service_arn)
-    echo "找到服务: $service_name"
+    echo "Found service: $service_name"
     
     if [[ $service_name == *"frontend"* ]]; then
         FRONTEND_SERVICE=$service_name
@@ -409,33 +379,33 @@ for service_arn in $SERVICES; do
     fi
 done
 
-# 6. 等待服务稳定
+# 6. Wait for services to stabilize
 echo "========================================="
-echo "步骤 6: 等待服务更新完成"
+echo "Step 6: Wait for service updates to complete"
 echo "========================================="
-echo "前端服务: $FRONTEND_SERVICE"
-echo "后端服务: $BACKEND_SERVICE"
-echo "等待前端服务稳定..."
+echo "Frontend service: $FRONTEND_SERVICE"
+echo "Backend service: $BACKEND_SERVICE"
+echo "Waiting for frontend service to stabilize..."
 aws ecs wait services-stable \
     --cluster $CLUSTER_NAME \
     --services $FRONTEND_SERVICE \
     --region $REGION &
 
-echo "等待后端服务稳定..."
+echo "Waiting for backend service to stabilize..."
 aws ecs wait services-stable \
     --cluster $CLUSTER_NAME \
     --services $BACKEND_SERVICE \
     --region $REGION &
 
-# 等待两个服务都完成
+# Wait for both services to complete
 wait
 
-# 7. 部署完成
+# 7. Deployment completed
 echo "========================================="
-echo "部署完成！"
+echo "Deployment completed!"
 echo "========================================="
 
-# 保存输出信息
+# Save output information
 cat > cdk-outputs.env << EOF
 ALB_DNS=$ALB_DNS
 FRONTEND_ECR=$FRONTEND_ECR
@@ -446,16 +416,16 @@ REGION=$REGION
 ACCOUNT_ID=$ACCOUNT_ID
 EOF
 
-echo "部署信息："
+echo "Deployment information:"
 echo "- ALB DNS: $ALB_DNS"
-echo "- 前端访问地址: http://$ALB_DNS"
-echo "- 后端 API 地址: http://$ALB_DNS/api"
-echo "- ECS 集群: $CLUSTER_NAME"
+echo "- Frontend access URL: http://$ALB_DNS"
+echo "- Backend API URL: http://$ALB_DNS/api"
+echo "- ECS Cluster: $CLUSTER_NAME"
 echo ""
-echo "监控链接："
-echo "- ECS 控制台: https://$REGION.$CONSOLE_DOMAIN/ecs/home?region=$REGION#/clusters/$CLUSTER_NAME"
-echo "- CloudWatch 日志: https://$REGION.$CONSOLE_DOMAIN/cloudwatch/home?region=$REGION#logsV2:log-groups"
+echo "Monitoring links:"
+echo "- ECS Console: https://$REGION.$CONSOLE_DOMAIN/ecs/home?region=$REGION#/clusters/$CLUSTER_NAME"
+echo "- CloudWatch Logs: https://$REGION.$CONSOLE_DOMAIN/cloudwatch/home?region=$REGION#logsV2:log-groups"
 echo ""
-echo "输出信息已保存到 cdk-outputs.env"
+echo "Output information saved to cdk-outputs.env"
 echo ""
-echo "🎉 MCP 应用已成功部署到 AWS ECS Fargate！"
+echo "🎉 MCP application successfully deployed to AWS ECS Fargate!"
