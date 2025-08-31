@@ -68,14 +68,14 @@ async def run_browser_task(
             logger.info(f"{result}")
             return result
         else:
-            logger.info('No result')
-            return "No result"
+            logger.info('Browser return with no result')
+            return "Browser return with no result"
         
     except Exception as e:
         logger.error(f"❌ Error during task execution:[/bold red] {str(e)}")
         import traceback
         traceback.print_exc()
-        return "No result"
+        return f"Error during task execution:[/bold red] {str(e)}"
         
 
 async def live_view_with_browser_use(prompt,client:BrowserClient, model_id:str , use_vision: bool, region:str):
@@ -129,6 +129,7 @@ async def live_view_with_browser_use(prompt,client:BrowserClient, model_id:str ,
             llm = ChatBedrockConverse(
                 model=model_id,
                 region_name=region,
+                temperature= 0.6,
                 aws_access_key_id = os.environ.get("BEDROCK_AWS_ACCESS_KEY_ID",os.environ.get("AWS_ACCESS_KEY_ID")),
                 aws_secret_access_key = os.environ.get("BEDROCK_AWS_SECRET_ACCESS_KEY",os.environ.get("AWS_SECRET_ACCESS_KEY"))
             )
@@ -197,12 +198,9 @@ class BrowserUseTool:
         if self.client is None:
             self.client = BrowserClient(self.region)
             self.client.start()
-            # viewer = BrowserViewerServer(self.client, port=8000)
-            # self.viewer_url = viewer.start(open_browser=False)
-            # return f"Browser client initialized, you can visit live session in :<view_url>{self.viewer_url}</view_url>"
             presigned_url = self.client.generate_live_view_url(expires=300)
             logger.info(f"Browser client initialized, you can visit live session in :<presigned_url>{presigned_url}</presigned_url>")
-            return f"Browser client initialized, you can visit live session in :<presigned_url>{presigned_url}</presigned_url>"
+            return f"Generate browser live session presigned_url :<presigned_url>{presigned_url}</presigned_url>"
 
         else:
             return "Browser client has already initialized"
@@ -210,7 +208,7 @@ class BrowserUseTool:
     @tool
     def browser_init(self) -> str:
         """
-        Initialize the browser client, before use browser tool
+        Initialize the browser client, You must invoke browser_init at first, then you can use browse tool
         """
         return self._initialize_browser()
     
@@ -241,6 +239,8 @@ class BrowserUseTool:
         Returns:
             the task result defined in a structured json with title, url, content
         """
+        if self.client is None:
+            return "Please initialize the browser client ahead"
         return self._browse_task(task)
 
 if __name__ == "__main__":
