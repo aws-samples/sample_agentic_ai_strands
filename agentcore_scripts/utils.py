@@ -811,13 +811,22 @@ def create_agentcore_role(agent_name):
             {
                 "Effect": "Allow",
                 "Action": [
-                    "logs:CreateLogStream",
-                    "logs:PutLogEvents"
+                    "logs:CreateLogGroup"
                 ],
                 "Resource": [
                     f"arn:aws:logs:{region}:{account_id}:log-group:/aws/bedrock-agentcore/runtimes/agent_runtime*"
                 ]
             },
+            {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": [
+                f"arn:aws:logs:{region}:{account_id}:log-group:/aws/bedrock-agentcore/runtimes/*:log-stream:*"
+            ]
+        },
             {
             "Effect": "Allow",
             "Action": [
