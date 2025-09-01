@@ -160,7 +160,7 @@ Please use the maximum computational power and token limit available in a single
       setBudgetTokens: (tokens) => set({ budgetTokens: tokens }),
       onlyNMostRecentImages: 1,
       setOnlyNMostRecentImages: (count) => set({ onlyNMostRecentImages: count }),
-      useMemory: true,
+      useMemory: false,
       setUseMemory: (enabled) => set({ useMemory: enabled }),
       useSwarm: false,
       setUseSwarm: (enabled) => set({ useSwarm: enabled }),
