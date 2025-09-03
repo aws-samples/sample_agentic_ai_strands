@@ -6,9 +6,10 @@ import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { FileText, ChevronDown, ChevronRight, Lightbulb, Loader2 } from 'lucide-react';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { FileText, ChevronDown, ChevronRight, Lightbulb, Loader2, Check, ClipboardCopy } from 'lucide-react';
 import { ToolCallDisplay } from './ToolCallDisplay';
+import { Button } from '@/components/ui/button';
 
 interface ChatMessageProps {
   message: Message;
@@ -132,6 +133,41 @@ const convertToToolCalls = (toolNameArray?: any[], toolInputArray?: any[], toolU
   }
   
   return toolCalls;
+};
+
+// Copy button component with copied state feedback
+const CopyButton = ({ content }: { content: string }) => {
+  const [copied, setCopied] = useState(false);
+  
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
+  
+  return (
+    <Button 
+      variant="ghost" 
+      size="sm" 
+      className="absolute bottom-2 right-2 px-2 opacity-70 hover:opacity-100 transition-opacity flex items-center gap-1"
+      onClick={handleCopy}
+      title="Copy to clipboard"
+    >
+      {copied ? (
+        <>
+          <Check className="h-4 w-4" /> <span className="text-xs">Copied</span>
+        </>
+      ) : (
+        <>
+          <ClipboardCopy className="h-4 w-4" /> <span className="text-xs">Copy</span>
+        </>
+      )}
+    </Button>
+  );
 };
 
 export function ChatMessage({ message, isRunning = false }: ChatMessageProps) {
@@ -283,7 +319,7 @@ export function ChatMessage({ message, isRunning = false }: ChatMessageProps) {
         {/* Message Bubble */}
         {message.content && (
           <div className={cn(
-            "rounded-lg px-4 py-3 shadow-sm w-full",
+            "rounded-lg px-4 py-3 shadow-sm w-full relative",
             message.role === 'user' 
               ? "bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-100" 
               : "bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
@@ -386,6 +422,13 @@ export function ChatMessage({ message, isRunning = false }: ChatMessageProps) {
                 
                 {isRunning && <span className="animate-pulse">▌</span>}
               </div>
+            )}
+            {/* Copy button for message content */}
+            {message.role === 'assistant' && message.content && (
+              <CopyButton content={typeof message.content === 'string' ? message.content : message.content.map(item => {
+                if (item.type === 'text') return item.text;
+                return '';
+              }).join('\n')}/>
             )}
           </div>
         )}
