@@ -139,13 +139,33 @@ const convertToToolCalls = (toolNameArray?: any[], toolInputArray?: any[], toolU
 const CopyButton = ({ content }: { content: string }) => {
   const [copied, setCopied] = useState(false);
   
-  const handleCopy = async () => {
+  const handleCopy = () => {
+    // Create a temporary textarea element
+    const textArea = document.createElement("textarea");
+    textArea.value = content;
+    
+    // Make the textarea invisible
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    textArea.style.opacity = "0";
+    
+    // Add it to the DOM
+    document.body.appendChild(textArea);
+    
+    // Select and copy
+    textArea.select();
+    
     try {
-      await navigator.clipboard.writeText(content);
+      // Execute the copy command
+      document.execCommand('copy');
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy text:', err);
+    } finally {
+      // Clean up
+      document.body.removeChild(textArea);
     }
   };
   
