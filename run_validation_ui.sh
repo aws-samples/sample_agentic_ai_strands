@@ -1,5 +1,5 @@
 #!/bin/bash
-
+source .venv/bin/activate
 # Workshop Lambda Validation UI Launcher
 echo "🚀 Starting Workshop Lambda Validation UI..."
 echo "Make sure your AWS credentials are configured!"
