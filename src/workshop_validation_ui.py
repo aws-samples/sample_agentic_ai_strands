@@ -7,7 +7,7 @@ import time
 
 # Configure Streamlit page
 st.set_page_config(
-    page_title="Workshop Lambda Validation UI",
+    page_title="Workshop Validation UI",
     page_icon="🚀",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -71,10 +71,6 @@ def display_lambda_response(result: Dict[str, Any]):
         # Display encrypted message if present
         if "encrypted_message" in response:
             st.code(f"Encrypted Message: {response['encrypted_message']}", language="text")
-            
-            # Decode and display the message
-            decoded_message = decode_encrypted_message(response["encrypted_message"])
-            st.success(f"**Decoded Message:** {decoded_message}")
         
         # Display any additional response fields
         if "message" in response:
@@ -88,7 +84,7 @@ def display_lambda_response(result: Dict[str, Any]):
         st.error(f"**Error:** {result['error']}")
 
 # Main UI
-st.title("🚀 Workshop Lambda Validation UI")
+st.title("🚀 Workshop Validation UI")
 st.markdown("---")
 
 # Sidebar for AWS configuration
@@ -98,7 +94,7 @@ with st.sidebar:
     # AWS Region selection
     aws_region = st.selectbox(
         "AWS Region",
-        ["us-west-2", "us-east-1", "eu-west-1", "ap-southeast-1"],
+        ["us-west-2", "us-east-1"],
         index=0
     )
     
@@ -109,7 +105,7 @@ with st.sidebar:
     task3_function = st.text_input("Task 3 Function", value="jam_task_3_validation")
     
     st.markdown("---")
-    st.markdown("**Note:** Make sure your AWS credentials are properly configured.")
+    # st.markdown("**Note:** Make sure your AWS credentials are properly configured.")
 
 # Main content area with tabs
 tab1, tab2, tab3 = st.tabs(["📋 Task 1: AgentCore Runtime", "🏗️ Task 2: ECS Stack", "📝 Task 3: Text Evaluation"])

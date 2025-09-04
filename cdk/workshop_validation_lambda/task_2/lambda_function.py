@@ -52,7 +52,7 @@ def lambda_handler(event, context):
     
     result = fetch_cf_status()
     
-    success_message = "Error"
+    success_message = "Failed! ECS cluster is not available"
     if result:
         success_message = "ECS cluster is available and running."
 

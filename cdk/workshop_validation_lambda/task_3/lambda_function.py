@@ -65,10 +65,13 @@ def lambda_handler(event, context):
     
     score = evaluate_text_with_bedrock(task, text)
     
-    if score > 40:
+    message = f"Failed! Task sorce:{score} is not past minimum requirement"
+    success_message = "The task is not past minimum requirement"
+
+    if score >= 50:
         success_message = f"Task is completed successfully"
-    else: 
-        success_message = "The task is not past for minium score"
+        message = f"Task is completed successfully with score:{score}"
+
     logging.info(f"success_message: {success_message}")
 
     combined_message = f"{taskguid}-{success_message}"
@@ -78,7 +81,7 @@ def lambda_handler(event, context):
 
     return {
         "encrypted_message": encrypted_message,
-        "message": f"{success_message}"
+        "message": f"{message}"
     }
    
 

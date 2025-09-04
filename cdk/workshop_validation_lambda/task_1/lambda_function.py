@@ -87,7 +87,7 @@ def lambda_handler(event, context):
 
     result = check_agent_runtime_status(runtime_arn)
     
-    success_message = "Error"
+    success_message = "Failed! AgentCore runtime agent is not available"
     if result:
         success_message = "AgentCore runtime agent is available and running."
 
