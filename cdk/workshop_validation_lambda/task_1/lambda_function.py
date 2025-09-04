@@ -100,5 +100,7 @@ def lambda_handler(event, context):
     encrypted_message = base64.b64encode(combined_message.encode('utf-8')).decode('utf-8')
 
     return {
-        "encrypted_message": encrypted_message
+        "encrypted_message": encrypted_message,
+        "message": f"{success_message}"
+
     }

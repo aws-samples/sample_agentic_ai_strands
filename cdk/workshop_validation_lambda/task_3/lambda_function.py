@@ -78,7 +78,7 @@ def lambda_handler(event, context):
 
     return {
         "encrypted_message": encrypted_message,
-        "message": f"{taskguid}-{success_message}"
+        "message": f"{success_message}"
     }
    
 

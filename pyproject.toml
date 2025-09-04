@@ -15,6 +15,7 @@ dependencies = [
     "pytz>=2024.2",
     "requests>=2.32.3",
     "rx>=3.2.0",
+    "streamlit>=1.28.0",
     "tzdata>=2024.2",
     "uvicorn>=0.34.0",
     "strands-agents==1.6.0",
