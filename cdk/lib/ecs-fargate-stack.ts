@@ -8,6 +8,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as rds from 'aws-cdk-lib/aws-rds';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 
 export interface EcsFargateStackProps extends cdk.StackProps {
@@ -808,5 +809,86 @@ export class EcsFargateStack extends cdk.Stack {
         description: 'Aurora PostgreSQL database name',
       });
     }
+
+    // 18. Create shared Lambda execution role for workshop validation
+    const lambdaExecutionRole = new iam.Role(this, `${prefix}-lambda-execution-role`, {
+      assumedBy: new iam.ServicePrincipal(`lambda.${servicePrincipalSuffix}`),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+      ],
+    });
+
+    // Add the required custom policies to the Lambda execution role
+    lambdaExecutionRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'bedrock-agentcore:GetAgentRuntime',
+        'cloudformation:ListStacks'
+      ],
+      resources: ['*'],
+    }));
+
+    lambdaExecutionRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'bedrock:InvokeModel',
+        'bedrock:InvokeModelWithResponseStream',
+        'bedrock:ListFoundationModelAgreementOffers',
+        'bedrock:PutFoundationModelEntitlement',
+        'bedrock:CreateFoundationModelAgreement'
+      ],
+      resources: [
+        'arn:aws:bedrock:*::foundation-model/amazon.nova-*',
+        'arn:aws:bedrock:*::foundation-model/us.amazon.nova-*',
+        'arn:aws:bedrock:*::foundation-model/openai*'
+      ],
+    }));
+
+    // 19. Create Lambda functions for workshop validation
+    const task1Lambda = new lambda.Function(this, `${prefix}-task1-validation`, {
+      functionName: 'jam_task_1_validation',
+      runtime: lambda.Runtime.PYTHON_3_13,
+      handler: 'lambda_function.lambda_handler',
+      code: lambda.Code.fromAsset('workshop_validation_lambda/task_1'),
+      role: lambdaExecutionRole,
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 256,
+    });
+
+    const task2Lambda = new lambda.Function(this, `${prefix}-task2-validation`, {
+      functionName: 'jam_task_2_validation',
+      runtime: lambda.Runtime.PYTHON_3_13,
+      handler: 'lambda_function.lambda_handler',
+      code: lambda.Code.fromAsset('workshop_validation_lambda/task_2'),
+      role: lambdaExecutionRole,
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 256,
+    });
+
+    const task3Lambda = new lambda.Function(this, `${prefix}-task3-validation`, {
+      functionName: 'jam_task_3_validation',
+      runtime: lambda.Runtime.PYTHON_3_13,
+      handler: 'lambda_function.lambda_handler',
+      code: lambda.Code.fromAsset('workshop_validation_lambda/task_3'),
+      role: lambdaExecutionRole,
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 256,
+    });
+
+    // Add Lambda function outputs
+    new cdk.CfnOutput(this, 'Task1LambdaArn', {
+      value: task1Lambda.functionArn,
+      description: 'Task 1 Validation Lambda Function ARN',
+    });
+
+    new cdk.CfnOutput(this, 'Task2LambdaArn', {
+      value: task2Lambda.functionArn,
+      description: 'Task 2 Validation Lambda Function ARN',
+    });
+
+    new cdk.CfnOutput(this, 'Task3LambdaArn', {
+      value: task3Lambda.functionArn,
+      description: 'Task 3 Validation Lambda Function ARN',
+    });
   }
 }
