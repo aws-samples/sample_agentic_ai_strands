@@ -56,7 +56,7 @@ RUN uv pip install git+https://github.com/xiehust/mem0.git
 RUN git clone https://github.com/BochaAI/bocha-search-mcp.git
 # RUN pip install git+https://ghproxy.cn/https://github.com/xiehust/sdk-python.git
 # download mcp repo 
-RUN git clone https://github.com/aws-samples/aws-mcp-servers-samples -b main
+RUN git clone https://github.com/xiehust/aws-mcp-servers-samples -b main
 
 RUN . .venv/bin/activate 
 
