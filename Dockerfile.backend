@@ -65,6 +65,11 @@ RUN \
 export PYTHON_SITEPACKAGES=`.venv/bin/python3 -c "import site; print(site.getsitepackages()[0])"`; \
 sed -i 's/\(self\._init_future\.result(timeout=\)30/\1120/g' ${PYTHON_SITEPACKAGES}/strands/tools/mcp/mcp_client.py
 
+
+RUN \
+export PYTHON_SITEPACKAGES=`.venv/bin/python3 -c "import site; print(site.getsitepackages()[0])"`; \
+sed -i 's/raise ValueError("Agent callbacks are not supported for Swarm agents yet.")/return None/g'  ${PYTHON_SITEPACKAGES}/strands/multiagent/swarm.py
+
 # Copy source code
 COPY src/ ./src/
 COPY conf/ ./conf/

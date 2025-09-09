@@ -31,6 +31,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
     setEnableStream,
     useMemory,
     setUseMemory,
+    useSwarm,
+    setUseSwarm,
     clearMessages,
     userId,
     setUserId,
@@ -230,6 +232,17 @@ export default function Sidebar({ onClose }: SidebarProps) {
             </div>
 
             <div className="flex items-center justify-between">
+              <label htmlFor="use-swarm" className="text-sm font-medium">
+                Use Swarm(Multi Agents)
+              </label>
+              <Switch
+                id="use-swarm"
+                checked={useSwarm}
+                onCheckedChange={setUseSwarm}
+              />
+            </div>
+
+            {/* <div className="flex items-center justify-between">
               <label htmlFor="enable-stream" className="text-sm font-medium">
                 Stream Response
               </label>
@@ -238,7 +251,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 checked={enableStream}
                 onCheckedChange={setEnableStream}
               />
-            </div>
+            </div> */}
 
             <div className="flex items-center justify-between">
               <label htmlFor="use-memory" className="text-sm font-medium">

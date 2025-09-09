@@ -40,7 +40,8 @@ export function ChatInput({ disabled = false, onLoadingChange }: ChatInputProps)
     temperature,
     budgetTokens,
     onlyNMostRecentImages,
-    useMemory
+    useMemory,
+    useSwarm
   } = useStore();
   
   // Get selected server IDs from mcpServers
@@ -189,7 +190,8 @@ export function ChatInput({ disabled = false, onLoadingChange }: ChatInputProps)
       const extraParams = {
         only_n_most_recent_images: onlyNMostRecentImages,
         budget_tokens: budgetTokens,
-        enable_thinking: enableThinking
+        enable_thinking: enableThinking,
+        use_swarm: useSwarm
       };
       
       // Send chat request

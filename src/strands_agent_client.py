@@ -20,9 +20,12 @@ from strands.agent.conversation_manager import SlidingWindowConversationManager
 from botocore.config import Config
 from custom_tools import mem0_memory
 from strands.telemetry import StrandsTelemetry
+from multi_agents.research_swarm import DeepResearchSwarm
+
 from constant import *
 load_dotenv()  # load environment variables from .env
-from strands_tools import swarm
+# from strands_tools import swarm
+
 
 import base64
 import os
@@ -227,6 +230,44 @@ class StrandsAgentClient(ChatClient):
         
         return tools
     
+    def _create_swarm_agents_with_tools(self, 
+                                       model, 
+                                       agent_hooks = [], 
+                                       tools=[],
+                                       system_prompt=None):
+        """Create a Swarm agent for deep researh"""
+        if not self.agent or not isinstance(self.agent, DeepResearchSwarm):
+            self.agent =  DeepResearchSwarm(model=model,
+                                    agent_hooks=agent_hooks,
+                                    tools=tools,
+                                    system_prompt=system_prompt
+                                    )
+        return self.agent
+        
+        
+        
+    def _create_single_agent_with_tools(self, 
+                                       model, 
+                                       agent_hooks = [],
+                                       messages = [], 
+                                       tools=[],
+                                       system_prompt=None):
+        """create a single agnet"""
+        if not self.agent or not isinstance(self.agent, Agent):
+            self.agent =  Agent(
+                            model=model,
+                            messages=messages,
+                            conversation_manager = SlidingWindowConversationManager(
+                                window_size=window_size,  # Maximum number of message pairs to keep
+                            ),
+                            # callback_handler=None,
+                            system_prompt=system_prompt or "You are a helpful assistant.",
+                            tools=tools,
+                            load_tools_from_directory=False
+            )
+        return self.agent
+    
+    
     async def _create_agent_with_tools(self, model_id, messages,mcp_clients=None, mcp_server_ids=None, system_prompt=None,thinking=True, 
                                        thinking_budget=4096,
                                        max_tokens=1024,
@@ -237,6 +278,7 @@ class StrandsAgentClient(ChatClient):
         
         # Create MCP tools
         tools = await self._create_mcp_tools(mcp_clients, mcp_server_ids)
+        logger.info(f"load tools:{[tool.tool_name for tool in tools]}")
 
         # Get the model
         model = self._get_model(model_id,thinking=thinking, thinking_budget=thinking_budget,max_tokens=max_tokens, temperature=temperature)
@@ -246,22 +288,12 @@ class StrandsAgentClient(ChatClient):
             tools += [mem0_memory]
             
         if use_swarm:
-            tools += [swarm]
-        
-        logger.info(f"load tools:{[tool.tool_name for tool in tools]}")
-        # add stop tool
-        # tools += [stop]
-        # Create agent
-        agent = Agent(
-            model=model,
-            messages=messages,
-            conversation_manager = SlidingWindowConversationManager(
-                window_size=window_size,  # Maximum number of message pairs to keep
-            ),
-            # callback_handler=None,
-            system_prompt=system_prompt or "You are a helpful assistant.",
-            tools=tools,
-            load_tools_from_directory=False
-        )
-        
+            agent = self._create_swarm_agents_with_tools(model=model,
+                                                     tools=tools,
+                                                     system_prompt=system_prompt)
+        else:
+            agent = self._create_single_agent_with_tools(model=model,
+                                                     messages=messages,
+                                                     tools=tools,
+                                                     system_prompt=system_prompt)
         return agent

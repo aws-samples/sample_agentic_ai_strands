@@ -20,9 +20,9 @@ dependencies = [
     "smithy-aws-core>=0.0.1",
     "tzdata>=2024.2",
     "uvicorn>=0.34.0",
-    "strands-agents==0.3.0",
+    "strands-agents==1.4.0",
     "strands-agents[otel]",
-    "strands-agents-tools==0.1.9",
+    "strands-agents-tools==0.2.3",
     "strands-agents-tools[mem0_memory]",
     "rich>=13.7.1",
     "psycopg2-binary>=2.9.10"

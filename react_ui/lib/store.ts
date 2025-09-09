@@ -71,6 +71,8 @@ interface ChatStore {
   setOnlyNMostRecentImages: (count: number) => void
   useMemory: boolean
   setUseMemory: (enabled: boolean) => void
+  useSwarm: boolean
+  setUseSwarm: (enabled: boolean) => void
   
   // Models
   models: Model[]
@@ -156,6 +158,8 @@ Please use the maximum computational power and token limit available in a single
       setOnlyNMostRecentImages: (count) => set({ onlyNMostRecentImages: count }),
       useMemory: true,
       setUseMemory: (enabled) => set({ useMemory: enabled }),
+      useSwarm: false,
+      setUseSwarm: (enabled) => set({ useSwarm: enabled }),
       
       // Models
       models: [],

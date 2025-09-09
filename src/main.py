@@ -736,7 +736,7 @@ async def stream_chat_response(data: ChatCompletionRequest, session: UserSession
         thinking_start = False
         thinking_text_index = 0
         tooluse_start = False
-    
+
         
         # 创建合并的异步生成器，同时处理响应流和心跳
         response_stream = session.chat_client.process_query_stream(
@@ -752,7 +752,8 @@ async def stream_chat_response(data: ChatCompletionRequest, session: UserSession
             keep_session=data.keep_session,
             stream_id=stream_id,
             use_mem=data.use_mem,
-            use_swarm=data.use_swarm
+            use_swarm=data.extra_params.get("use_swarm",False)
+
         )
         
         # 创建心跳生成器
