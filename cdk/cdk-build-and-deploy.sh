@@ -417,9 +417,9 @@ ACCOUNT_ID=$ACCOUNT_ID
 EOF
 
 echo "Deployment information:"
-echo "- ALB DNS: $ALB_DNS"
-echo "- Frontend access URL: http://$ALB_DNS"
-echo "- Backend API URL: http://$ALB_DNS/api"
+# echo "- ALB DNS: $ALB_DNS"
+# echo "- Frontend access URL: http://$ALB_DNS"
+# echo "- Backend API URL: http://$ALB_DNS/api"
 echo "- ECS Cluster: $CLUSTER_NAME"
 echo ""
 echo "Monitoring links:"
@@ -428,4 +428,4 @@ echo "- CloudWatch Logs: https://$REGION.$CONSOLE_DOMAIN/cloudwatch/home?region=
 echo ""
 echo "Output information saved to cdk-outputs.env"
 echo ""
-echo "🎉 MCP application successfully deployed to AWS ECS Fargate!"
+echo "🎉 Application successfully deployed to AWS ECS Fargate!"
