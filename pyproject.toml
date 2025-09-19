@@ -17,7 +17,7 @@ dependencies = [
     "rx>=3.2.0",
     "tzdata>=2024.2",
     "uvicorn>=0.34.0",
-    "strands-agents==1.6.0",
+    "strands-agents==1.9.0",
     "strands-agents[otel]",
     "strands-agents-tools==0.2.5",
     "bedrock-agentcore==0.1.2",

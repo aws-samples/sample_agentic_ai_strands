@@ -6207,7 +6207,7 @@ requires-dist = [
     { name = "pytz", specifier = ">=2024.2" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "rx", specifier = ">=3.2.0" },
-    { name = "strands-agents", specifier = "==1.6.0" },
+    { name = "strands-agents", specifier = "==1.9.0" },
     { name = "strands-agents", extras = ["otel"] },
     { name = "strands-agents-tools", specifier = "==0.2.5" },
     { name = "tzdata", specifier = ">=2024.2" },
@@ -6216,7 +6216,7 @@ requires-dist = [
 
 [[package]]
 name = "strands-agents"
-version = "1.6.0"
+version = "1.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "boto3" },
@@ -6230,9 +6230,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "watchdog" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/12/cc/e4c0324895c15fd1f0507616d7346697e0810ac431e588860a16d6916cf4/strands_agents-1.6.0.tar.gz", hash = "sha256:bb3ce55e29630210ba19ac13b5b6aa7c92d1e403a80bbf0738e58d092dba8036", size = 268023, upload-time = "2025-08-26T17:28:54.701Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/40/e0/65952b5c8767b62e9e5b4da1df8203bbaaa1e0d8753b5bc0a35674e0d607/strands_agents-1.9.0.tar.gz", hash = "sha256:84610b855bc79236ce822626b852c6f5a3c1a1de63592445a704a4f8a7249695", size = 394868, upload-time = "2025-09-17T19:13:01.751Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/c3/a8beae822a7960eaa16bbc41d3854f5a0bf9753336e6a659bf78c96ec6ea/strands_agents-1.6.0-py3-none-any.whl", hash = "sha256:c7ce5f061df94d7081d1368aa4037c99cf2239f94a8151eee48fac57bf7b0707", size = 186311, upload-time = "2025-08-26T17:28:52.338Z" },
+    { url = "https://files.pythonhosted.org/packages/64/af/dec0c4c71eeafb07fdbf24f74f2d0e7a6796931a3a192e19d0ed0e9bb106/strands_agents-1.9.0-py3-none-any.whl", hash = "sha256:a7a7c51d71278ee6daf7d47089456abc6de3a62e7cd433c08031a97c6b2e59f3", size = 205328, upload-time = "2025-09-17T19:13:00.22Z" },
 ]
 
 [package.optional-dependencies]
