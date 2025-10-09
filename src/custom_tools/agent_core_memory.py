@@ -16,6 +16,7 @@ from botocore.config import Config as BotocoreConfig
 from strands import tool
 from strands.types.tools import AgentTool
 from bedrock_agentcore.memory import MemoryClient
+import os
 import logging
 logging.basicConfig(
     level=logging.INFO,
@@ -123,7 +124,9 @@ class AgentCoreMemoryToolProvider:
         def get_namespaces() -> Dict:
             """Get namespace mapping for memory strategies."""
             strategies = memory_control_client.get_memory_strategies(self.memory_id)
-            return {i["type"]: i["namespaces"][0].format(actorId=self.actor_id ) for i in strategies}
+            return {i["type"]: i["namespaces"][0].format(actorId=self.actor_id,
+                                                         memoryStrategyId=i["memoryStrategyId"],
+                                                         sessionId=session_id) for i in strategies}
         self.namespace = get_namespaces()
     
 
@@ -198,7 +201,7 @@ class AgentCoreMemoryToolProvider:
             response = self.retrieve_memory_records(
                 memory_id=memory_id,
                 namespace=namespace,
-                search_query=query,
+                search_query=search_query,
                 max_results=max_results,
                 next_token=next_token,
             )

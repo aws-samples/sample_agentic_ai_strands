@@ -20,7 +20,7 @@ dependencies = [
     "strands-agents==1.9.0",
     "strands-agents[otel]",
     "strands-agents-tools==0.2.5",
-    "bedrock-agentcore==0.1.2",
+    "bedrock-agentcore==0.1.7",
     "bedrock-agentcore-starter-toolkit==0.1.6",
     "playwright",
     "aws-opentelemetry-distro>=0.10.0",
