@@ -207,8 +207,9 @@ export function ChatMessage({ message, isRunning = false }: ChatMessageProps) {
       )}>
         {message.role === 'user' ? '👤' : (
           <img 
-            src="/bedrock.webp" 
-            alt="Amazon Bedrock"
+            // src="/bedrock.webp" 
+            src = '/robot-bot-icon.svg'
+            alt="bot"
             className="h-full w-full object-cover rounded-md"
           />
         )}

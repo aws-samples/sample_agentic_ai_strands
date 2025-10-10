@@ -77,7 +77,7 @@ export default function Home() {
                   <Settings className="h-5 w-5" />
                 </button>
               )}
-              <h1 className="text-lg font-semibold"> Amazon Bedrock AgentCore with Strands Agents</h1>
+              <h1 className="text-lg font-semibold"> Claude Agent in Bedrock AgentCore</h1>
             </div>
             <div className="flex items-center gap-2">
               {user && (

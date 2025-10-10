@@ -114,15 +114,15 @@ async def remove_history(
 ):
     # 验证用户身份
     auth_result = await authenticate_user(auth)
-    
+
     # 获取用户ID
     user_id = get_user_id_from_request(request, auth_result)
-    
+
     logger.info(f"remove history for user:{user_id} (auth_type: {auth_result.auth_type})")
     # 直接从ddb里删除记录即可
     # await delete_user_message(user_id)
     runtime_id = generate_id_from_string(user_id)
-    
+
     payload = {
         "user_id":user_id,
         "request_type":"removehistory",
@@ -130,8 +130,16 @@ async def remove_history(
                 "stream_id":"dummy-stream-id"
             }
     }
-    
-    response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload,development=DEV_MODE)
+
+    # Get runtime ARN from custom header if provided
+    # Log all headers for debugging
+    runtime_arn = request.headers.get('X-AgentCore-Runtime-ARN')
+    response = invoke_agentcore_runtime(
+        session_id=runtime_id,
+        payload=payload,
+        development=DEV_MODE,
+        runtime_arn=runtime_arn
+    )
     
     return JSONResponse(
             content={"errno": 0, "msg": "removed history"},
@@ -155,19 +163,28 @@ async def stop_stream(
     """停止正在进行的模型输出流"""
     # 验证用户身份
     auth_result = await authenticate_user(auth)
-    
+
     # 获取用户ID
     user_id = get_user_id_from_request(request, auth_result)
     logger.info(f"stopping request for user:{user_id} /{stream_id} (auth_type: {auth_result.auth_type})")
     runtime_id = generate_id_from_string(user_id)
-    
+
     payload = {
         "user_id":user_id,
         "request_type":"stopstream",
         "data":{"stream_id":stream_id}
     }
-    
-    response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload,development=DEV_MODE)
+
+    # Get runtime ARN from custom header if provided
+    # Log all headers for debugging
+    runtime_arn = request.headers.get('X-AgentCore-Runtime-ARN')
+
+    response = invoke_agentcore_runtime(
+        session_id=runtime_id,
+        payload=payload,
+        development=DEV_MODE,
+        runtime_arn=runtime_arn
+    )
     # 立即返回响应给客户端
     return JSONResponse(
         content={"errno": 0, "msg": "Stream stopping initiated"},
@@ -368,24 +385,24 @@ async def process_query_stream(boto3_response) -> AsyncGenerator[str, None]:
                     line = json.loads(line[6:])
                     yield line
     
-async def stream_chat_response(data: ChatCompletionRequest, 
-                               user_id: str, 
-                               stream_id: Optional[str] = None, 
+async def stream_chat_response(data: ChatCompletionRequest,
+                               user_id: str,
+                               stream_id: Optional[str] = None,
                                token :Optional[str] = None) -> AsyncGenerator[str, None]:
-    """为特定用户生成流式聊天响应"""    
+    """为特定用户生成流式聊天响应"""
     runtime_id = generate_id_from_string(user_id)
-    
+
     payload = {
         "user_id":user_id,
         "request_type":"chatcompletion",
         "data" :{**data.model_dump(),"stream_id":stream_id,"token":token}
     }
-    
+
     logger.info(f"runtimesid:{runtime_id}\npayload:{payload}")
-    
+
     # 心跳任务控制
     heartbeat_stop_event = asyncio.Event()
-    
+
     async def heartbeat_sender():
         """独立的心跳发送任务"""
         try:
@@ -396,9 +413,16 @@ async def stream_chat_response(data: ChatCompletionRequest,
                     yield ": heartbeat\n\n"
         except asyncio.CancelledError:
             pass
-    
-    try:        
-        boto3_response = invoke_agentcore_runtime(session_id=runtime_id,payload=payload,development=DEV_MODE)
+
+    try:
+        # Extract agentcore_runtime_arn from request data if provided
+        runtime_arn = data.agentcore_runtime_arn if data.agentcore_runtime_arn else None
+        boto3_response = invoke_agentcore_runtime(
+            session_id=runtime_id,
+            payload=payload,
+            development=DEV_MODE,
+            runtime_arn=runtime_arn
+        )
         # 创建心跳生成器
         heartbeat_gen = heartbeat_sender()
         

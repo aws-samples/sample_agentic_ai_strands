@@ -388,7 +388,7 @@ export function processStreamResponse(
 /**
  * Stop an active streaming response
  */
-export async function stopStream(userId: string, streamId: string) {
+export async function stopStream(userId: string, streamId: string, agentcoreRuntimeArn?: string) {
   // Don't attempt to stop if stream ID is empty
   if (!streamId) {
     console.warn('No stream ID provided to stop');
@@ -400,15 +400,22 @@ export async function stopStream(userId: string, streamId: string) {
 
   const baseUrl = getBaseUrl();
   const url = `${baseUrl.replace(/\/$/, '')}/stop/stream/${streamId}`;
-  
+
   try {
     const controller = new AbortController();
     // Set a timeout to prevent the stop request from hanging
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
+
+    const headers: Record<string, string> = await getAuthHeaders(userId);
+
+    // Add agentcore runtime ARN header if provided
+    if (agentcoreRuntimeArn && agentcoreRuntimeArn.trim() !== '') {
+      headers['X-AgentCore-Runtime-ARN'] = agentcoreRuntimeArn;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: await getAuthHeaders(userId),
+      headers,
       signal: controller.signal
     });
     
@@ -456,7 +463,8 @@ export async function sendChatRequest({
   useSwarm = false,
   useCodeInterpreter = false,
   useBrowser = false,
-  extraParams = {}
+  extraParams = {},
+  agentcoreRuntimeArn
 }: {
   messages: Message[];
   modelId: string;
@@ -470,10 +478,11 @@ export async function sendChatRequest({
   useCodeInterpreter?: boolean;
   useBrowser?: boolean;
   extraParams?: Record<string, any>;
+  agentcoreRuntimeArn?: string;
 }) {
   const baseUrl = getBaseUrl();
-  
-  const payload = {
+
+  const payload: any = {
     messages,
     model: modelId,
     mcp_server_ids: mcpServerIds,
@@ -488,6 +497,11 @@ export async function sendChatRequest({
     temperature,
     max_tokens: maxTokens
   };
+
+  // Add agentcore_runtime_arn if provided
+  if (agentcoreRuntimeArn && agentcoreRuntimeArn.trim() !== '') {
+    payload.agentcore_runtime_arn = agentcoreRuntimeArn;
+  }
   
   try {
       if (stream) {

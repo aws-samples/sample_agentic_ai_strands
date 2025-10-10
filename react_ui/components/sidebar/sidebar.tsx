@@ -43,7 +43,9 @@ export default function Sidebar({ onClose }: SidebarProps) {
     budgetTokens,
     setBudgetTokens,
     onlyNMostRecentImages,
-    setOnlyNMostRecentImages
+    setOnlyNMostRecentImages,
+    agentcoreRuntimeArn,
+    setAgentcoreRuntimeArn
   } = useStore()
   
   // Auto-set user ID from authenticated user
@@ -113,6 +115,23 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 Model
               </label>
               <ModelSelector />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="agentcore-runtime-arn" className="text-sm font-medium">
+                AgentCore Runtime ARN (Optional)
+              </label>
+              <input
+                id="agentcore-runtime-arn"
+                type="text"
+                value={agentcoreRuntimeArn}
+                onChange={(e) => setAgentcoreRuntimeArn(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background"
+                placeholder="arn:aws:bedrock-agentcore:us-west-2:xxxxx:runtime/xxxxx"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to use the default runtime configured on the server
+              </p>
             </div>
 
             <div className="space-y-2">
