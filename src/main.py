@@ -223,12 +223,13 @@ async def add_mcp_server(
         token=config_json[server_id].get('token', "")
      # 保存用户服务器配置
     server_config = {
-        "url":server_url,
-        "command": server_cmd,
-        "args": server_script_args,
-        "env": server_script_envs,
-        "description": server_desc,
-        "token":token
+        **config_json[server_id]
+        # "url":server_url,
+        # "command": server_cmd,
+        # "args": server_script_args,
+        # "env": server_script_envs,
+        # "description": server_desc,
+        # "token":token
     }
     ret = await save_user_server_config(user_id, server_id, server_config)
     if ret:
