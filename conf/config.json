@@ -11,6 +11,38 @@
 		{
 			"model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
 			"model_name": "Claude 3.7 Sonnet (US)"
+		},
+	    {
+			"model_id": "openai.gpt-oss-120b-1:0",
+			"model_name": "GPT-OSS-120B"
+		},
+		{
+			"model_id": "openai.gpt-oss-20b-1:0",
+			"model_name": "GPT-OSS-20B"
+		},
+		{
+		"model_id": "qwen.qwen3-235b-a22b-2507-v1:0",
+		"model_name": "Qwen3 235B A22B 2507"
+		},
+		{
+		"model_id": "qwen.qwen3-32b-v1:0",
+		"model_name": "Qwen3 32B (dense)"
+		},
+		{
+		"model_id": "qwen.qwen3-coder-480b-a35b-v1:0",
+		"model_name": "Qwen3 Coder 480B A35B Instruct"
+		},
+		{
+		"model_id": "deepseek.v3-v1:0",
+		"model_name": "DeepSeek-V3.1"
+		},
+		{
+			"model_id": "us.amazon.nova-premier-v1:0",
+			"model_name": "Amazon Nova Premier v1"
+		},
+		{
+			"model_id": "us.amazon.nova-pro-v1:0",
+			"model_name": "Amazon Nova Pro v1"
 		}
 	],
 	"mcpServers": {
