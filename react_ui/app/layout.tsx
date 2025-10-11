@@ -7,8 +7,8 @@ import { AuthProvider } from '@/components/providers/AuthProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Strands Agent with MCP',
-  description: 'Agentic AI application with Model Context Protocol integration',
+  title: 'Agentic AI application UI',
+  description: 'Agentic AI application UI in ECS fargate',
 }
 
 export default function RootLayout({
