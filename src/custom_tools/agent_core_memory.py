@@ -422,14 +422,23 @@ class AgentCoreMemoryToolProvider:
         all_event_ids = []
         next_token = ""
         while True:
-            response = self.bedrock_agent_core_client.list_events(
-                memoryId = self.memory_id,
-                sessionId = session_id,
-                actorId = self.actor_id,
-                includePayloads = False,
-                maxResults = 100,
-                nextToken = next_token
-            )
+            if  not next_token:
+                response = self.bedrock_agent_core_client.list_events(
+                    memoryId = self.memory_id,
+                    sessionId = session_id,
+                    actorId = self.actor_id,
+                    includePayloads = False,
+                    maxResults = 100,
+                )
+            else:
+                response = self.bedrock_agent_core_client.list_events(
+                    memoryId = self.memory_id,
+                    sessionId = session_id,
+                    actorId = self.actor_id,
+                    includePayloads = False,
+                    maxResults = 100,
+                    nextToken = next_token
+                )
             if 'events' in response:
                 all_event_ids += [event['eventId'] for event in response['events'] ]
         

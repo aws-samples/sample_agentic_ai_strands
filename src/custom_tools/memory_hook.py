@@ -97,11 +97,9 @@ class AgentMemoryHooks(HookProvider):
                 for msg in reversed(messages):
                     if msg["role"] == "assistant" and not agent_response:
                         # only add text messages
-                        if "text" in msg["content"][0]:
-                            agent_response = msg["content"][0]["text"]
-                    elif msg["role"] == "user" and not customer_query and "toolResult" not in msg["content"][0]:
-                        if "text" in msg["content"][0]:
-                            customer_query = msg["content"][0]["text"]
+                        agent_response = '\n'.join([block['text'] for block in msg["content"] if 'text' in block])
+                    elif msg["role"] == "user" and not customer_query:
+                        customer_query = '\n'.join([block['text'] for block in msg["content"] if 'text' in block])
                         break
                 
                 if customer_query and agent_response:
