@@ -49,6 +49,7 @@ class ChatCompletionRequest(BaseModel):
     mcp_server_ids: Optional[List[str]] = []
     stream_id: Optional[str] = "default-stream-id"
     token:Optional[str] = None
+    agentcore_runtime_arn: Optional[str] = None
 
 class ChatResponse(BaseModel):
     id: str

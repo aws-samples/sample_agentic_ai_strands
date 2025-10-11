@@ -11,6 +11,9 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 // Get standardized headers for backend requests
 export const getBackendHeaders = (req: NextApiRequest) => {
+  // Debug: log incoming headers
+  console.log('Incoming request headers:', req.headers);
+
   // Copy relevant headers from the client request
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -25,6 +28,16 @@ export const getBackendHeaders = (req: NextApiRequest) => {
   if (req.headers['x-user-id']) {
     headers['X-User-ID'] = req.headers['x-user-id'] as string;
   }
+
+  // Forward AgentCore Runtime ARN header if present
+  if (req.headers['x-agentcore-runtime-arn']) {
+    headers['X-AgentCore-Runtime-ARN'] = req.headers['x-agentcore-runtime-arn'] as string;
+    console.log('Forwarding X-AgentCore-Runtime-ARN:', req.headers['x-agentcore-runtime-arn']);
+  } else {
+    console.log('X-AgentCore-Runtime-ARN header not found in request');
+  }
+
+  console.log('Headers being forwarded to backend:', headers);
 
   return headers;
 };

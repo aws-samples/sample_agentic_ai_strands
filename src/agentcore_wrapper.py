@@ -58,12 +58,21 @@ def invoke_local_runtime(session_id:str,payload:Dict[str,Any]):
         logger.info(f"{str(e)}")
         
     
-def invoke_agentcore_runtime(session_id:str,payload:Dict[str,Any],qualifier="DEFAULT",development=False):
+def invoke_agentcore_runtime(session_id:str,payload:Dict[str,Any],qualifier="DEFAULT",development=False,runtime_arn:str=None):
     if development:
         return invoke_local_runtime(session_id=session_id,payload=payload)
+
+    # Use provided runtime_arn if available, otherwise use the default from environment
+    agent_runtime_arn = runtime_arn if runtime_arn else invoke_agent_arn
+
+    if not agent_runtime_arn:
+        raise ValueError("No AgentCore Runtime ARN provided. Please set AGENTCORE_RUNTIME_ARN in environment or pass runtime_arn parameter.")
+
+    logger.info(f"Using AgentCore Runtime ARN: {agent_runtime_arn}")
+
     try:
         boto3_response = agentcore_client.invoke_agent_runtime(
-                    agentRuntimeArn=invoke_agent_arn,
+                    agentRuntimeArn=agent_runtime_arn,
                     runtimeSessionId=session_id,
                     qualifier=qualifier,
                     payload=json.dumps(payload,ensure_ascii=False)
@@ -78,10 +87,10 @@ def invoke_agentcore_runtime(session_id:str,payload:Dict[str,Any],qualifier="DEF
             # Generate new session_id and retry
             new_session_id = generate_id_from_string(f"{rand_str}")
             logger.info(f"Retrying with new session_id: {new_session_id}")
-            
+
             try:
                 boto3_response = agentcore_client.invoke_agent_runtime(
-                            agentRuntimeArn=invoke_agent_arn,
+                            agentRuntimeArn=agent_runtime_arn,
                             runtimeSessionId=new_session_id,
                             qualifier=qualifier,
                             payload=json.dumps(payload,ensure_ascii=False)

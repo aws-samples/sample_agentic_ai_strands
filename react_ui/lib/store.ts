@@ -53,7 +53,7 @@ interface ChatStore {
   addMessage: (message: Message) => void
   updateLastMessage: (content: string | ContentItem[], thinking?: string, toolUse?: any[],toolName?:any[], toolInput?: any[], toolCalls?: ToolCall[], isThinking?: boolean) => void
   clearMessages: () => void
-  
+
   // Settings
   systemPrompt: string
   setSystemPrompt: (prompt: string) => void
@@ -77,20 +77,24 @@ interface ChatStore {
   setUseCodeInterpreter: (enabled: boolean) => void
   useBrowser: boolean
   setUseBrowser: (enabled: boolean) => void
-  
+
+  // AgentCore Runtime
+  agentcoreRuntimeArn: string
+  setAgentcoreRuntimeArn: (arn: string) => void
+
   // Models
   models: Model[]
   setModels: (models: Model[]) => void
   selectedModel: string
   setSelectedModel: (modelId: string) => void
-  
+
   // MCP Servers
   mcpServers: McpServer[]
   setMcpServers: (servers: McpServer[]) => void
   toggleServerEnabled: (serverId: string) => void
   addMcpServer: (server: McpServer) => void
   removeMcpServer: (serverId: string) => void
-  
+
   // User
   userId: string
   setUserId: (id: string) => void
@@ -125,11 +129,11 @@ Please use the maximum computational power and token limit available in a single
       }),
       clearMessages: () => {
         const state = useStore.getState();
-        
+
         // Call the API to remove server-side history
         if (state.userId) {
           import('./api/history').then(({ removeHistory }) => {
-            removeHistory(state.userId).then((result) => {
+            removeHistory(state.userId, state.agentcoreRuntimeArn).then((result) => {
               if (!result.success) {
                 console.error('Failed to remove history on server:', result.message);
               }
@@ -138,10 +142,10 @@ Please use the maximum computational power and token limit available in a single
             });
           });
         }
-        
+
         // Reset local messages in any case
-        set((state) => ({ 
-          messages: [{ role: 'system', content: state.systemPrompt }] 
+        set((state) => ({
+          messages: [{ role: 'system', content: state.systemPrompt }]
         }));
       },
       
@@ -168,7 +172,11 @@ Please use the maximum computational power and token limit available in a single
       setUseCodeInterpreter: (enabled) => set({ useCodeInterpreter: enabled }),
       useBrowser: false,
       setUseBrowser: (enabled) => set({ useBrowser: enabled }),
-      
+
+      // AgentCore Runtime
+      agentcoreRuntimeArn: '',
+      setAgentcoreRuntimeArn: (arn) => set({ agentcoreRuntimeArn: arn }),
+
       // Models
       models: [],
       setModels: (models) => set({ models }),

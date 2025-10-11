@@ -5,7 +5,6 @@ import { NextApiRequest, NextApiResponse } from 'next';
 const MCP_BASE_URL = process.env.SERVER_MCP_BASE_URL || 'http://localhost:7002';
 
 // Configure fetch to ignore SSL errors for self-signed certificates
-// This is safe because we're making the request from the server side
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 // Handler for stopping active streaming requests
@@ -35,7 +34,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       headers['X-User-ID'] = req.headers['x-user-id'] as string;
     }
 
-    // Set a timeout for the request to prevent blocking
+    // Forward X-AgentCore-Runtime-ARN header if present
+    if (req.headers['x-agentcore-runtime-arn']) {
+      headers['X-AgentCore-Runtime-ARN'] = req.headers['x-agentcore-runtime-arn'] as string;
+    }
+
+    // Set a timeout for the request to prevent it from being blocked
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
@@ -45,14 +49,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       headers: headers,
       signal: controller.signal,
     });
-    
+
     // Clear the timeout
     clearTimeout(timeoutId);
 
     if (!response.ok) {
       // Backend returned an error
       console.warn(`Stream stop response not OK: ${response.status}`);
-      // For UI purposes, still return success if the stream might have already completed
+      // For UI purposes, still return success if the stream may have already completed
       return res.status(200).json({
         success: true,
         errno: 0,
@@ -65,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(data);
   } catch (error) {
     console.error('Error stopping stream:', error);
-    // For UI purposes, still return success even on network errors
+    // For UI purposes, still return success even on network error
     return res.status(200).json({
       success: true,
       errno: 0,

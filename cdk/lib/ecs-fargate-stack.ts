@@ -698,7 +698,7 @@ export class EcsFargateStack extends cdk.Stack {
     const frontendService = new ecs.FargateService(this, `${prefix}-frontend-service`, {
       cluster: this.cluster,
       taskDefinition: frontendTaskDefinition,
-      desiredCount: 2,
+      desiredCount: 1,
       assignPublicIp: false,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
@@ -710,7 +710,7 @@ export class EcsFargateStack extends cdk.Stack {
     const backendService = new ecs.FargateService(this, `${prefix}-backend-service`, {
       cluster: this.cluster,
       taskDefinition: backendTaskDefinition,
-      desiredCount: 2,
+      desiredCount: 1,
       assignPublicIp: false,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
@@ -725,7 +725,7 @@ export class EcsFargateStack extends cdk.Stack {
 
     // 16. Enable Auto Scaling for services
     const frontendScaling = frontendService.autoScaleTaskCount({
-      minCapacity: 2,
+      minCapacity: 1,
       maxCapacity: 10,
     });
 
@@ -736,7 +736,7 @@ export class EcsFargateStack extends cdk.Stack {
     });
 
     const backendScaling = backendService.autoScaleTaskCount({
-      minCapacity: 2,
+      minCapacity: 1,
       maxCapacity: 10,
     });
 

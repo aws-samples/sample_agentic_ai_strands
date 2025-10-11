@@ -6,13 +6,20 @@ import { getAuthHeaders } from '../auth'
 /**
  * Request to remove history from server
  */
-export async function removeHistory(userId: string) {
+export async function removeHistory(userId: string, agentcoreRuntimeArn?: string) {
   const baseUrl = getBaseUrl();
   const url = `${baseUrl.replace(/\/$/, '')}/remove/history`;
   try {
+    const headers: Record<string, string> = await getAuthHeaders(userId);
+
+    // Add agentcore runtime ARN header if provided
+    if (agentcoreRuntimeArn && agentcoreRuntimeArn.trim() !== '') {
+      headers['X-AgentCore-Runtime-ARN'] = agentcoreRuntimeArn;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: await getAuthHeaders(userId)
+      headers
     });
     
     if (!response.ok) {

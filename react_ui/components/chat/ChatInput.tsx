@@ -43,7 +43,8 @@ export function ChatInput({ disabled = false, onLoadingChange }: ChatInputProps)
     useMemory,
     useSwarm,
     useCodeInterpreter,
-    useBrowser
+    useBrowser,
+    agentcoreRuntimeArn
   } = useStore();
   
   // Get selected server IDs from mcpServers
@@ -79,7 +80,7 @@ export function ChatInput({ disabled = false, onLoadingChange }: ChatInputProps)
     }
     
     try {
-      const result = await stopStream(userId, currentStreamId);
+      const result = await stopStream(userId, currentStreamId, agentcoreRuntimeArn);
       if (result.success) {
         console.log('Stream stopped successfully');
       } else {
@@ -210,7 +211,8 @@ export function ChatInput({ disabled = false, onLoadingChange }: ChatInputProps)
           useSwarm,
           useCodeInterpreter,
           useBrowser,
-          extraParams
+          extraParams,
+          agentcoreRuntimeArn
         });
         
         if (response) {
@@ -388,7 +390,8 @@ export function ChatInput({ disabled = false, onLoadingChange }: ChatInputProps)
           useSwarm,
           useCodeInterpreter,
           useBrowser,
-          extraParams
+          extraParams,
+          agentcoreRuntimeArn
         });
         // Extract thinking from message
         const { thinking, cleanContent: contentAfterThinking } = extractThinking(message);
