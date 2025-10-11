@@ -194,7 +194,7 @@ class DeepResearchSwarm:
         return {
             "research_coordinator": research_coordinator,
             # "academic_researcher": academic_researcher,
-            "industry_analyst": industry_analyst,
+            # "industry_analyst": industry_analyst,
             "technical_specialist": technical_specialist,
             "data_analyst": data_analyst,
             "synthesis_writer": synthesis_writer,
