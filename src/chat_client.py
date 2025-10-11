@@ -53,7 +53,10 @@ class ChatClient:
         # elif self.agent:
         #     self.agent.messagas = []
         if self.memory_provider:
-            self.memory_provider.delete_all_events(self.user_id)
+            try:
+                self.memory_provider.delete_all_events(self.user_id)
+            except Exception as e:
+                logger.info(f"delete_all_events exception:{e}")
     
     async def save_history(self):
         pass

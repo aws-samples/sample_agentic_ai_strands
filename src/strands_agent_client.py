@@ -103,16 +103,16 @@ class StrandsAgentClient(ChatClient):
                     }
                 } if thinking else {}
             
-            if model_id in [CLAUDE_4_SONNET_MODEL_ID,CLAUDE_4_OPUS_MODEL_ID]:
+            if is_interleaved_claude_thinking(model_id):
                 additional_request_fields['anthropic_beta'] = ["interleaved-thinking-2025-05-14"]
             
             cache_tools = None
             cache_prompt= None
-            if model_id in [CLAUDE_4_SONNET_MODEL_ID,CLAUDE_4_OPUS_MODEL_ID,CLAUDE_37_SONNET_MODEL_ID,CLAUDE_35_SONNET_MODEL_ID]:
+            if is_prompt_cache(model_id):
                 cache_tools = "default"
                 cache_prompt="default"
                 
-            if model_id in [CLAUDE_4_SONNET_MODEL_ID,CLAUDE_4_OPUS_MODEL_ID,CLAUDE_37_SONNET_MODEL_ID] and thinking:
+            if thinking and is_claude_thinking(model_id):
                 temperature = 1.0
 
             return BedrockModel(
