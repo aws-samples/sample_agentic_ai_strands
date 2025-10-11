@@ -271,7 +271,8 @@ class StrandsAgentClientStream(StrandsAgentClient):
         user_identity = f"\nHere is the request from User with user id:{self.user_id}\n"
         system_prompt += user_identity
         
-        thinking = extra_params.get('enable_thinking', False) and model_id in [CLAUDE_37_SONNET_MODEL_ID,CLAUDE_4_SONNET_MODEL_ID,CLAUDE_4_OPUS_MODEL_ID]
+        thinking = extra_params.get('enable_thinking', False) and is_claude_thinking(model_id)
+        
         thinking_budget = extra_params.get("budget_tokens",4096)
         max_tokens = max(thinking_budget + 1, max_tokens) if thinking else max_tokens
         # Create agent with MCP tools
