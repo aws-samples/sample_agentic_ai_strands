@@ -108,11 +108,11 @@ with st.sidebar:
     # st.markdown("**Note:** Make sure your AWS credentials are properly configured.")
 
 # Main content area with tabs
-tab1, tab2, tab3 = st.tabs(["📋 Task 1: AgentCore Runtime", "🏗️ Task 2: ECS Stack", "📝 Task 3: Text Evaluation"])
+tab1, tab2, tab3 = st.tabs(["📋 Task 2: Awakening ARIA's Core Intelligence", "🏗️ Task 3: Building ARIA's Enterprise Platform", "📝 Task 4: Demonstrating ARIA's Real-World Magic"])
 
 # Task 1 Tab - AgentCore Runtime Validation
 with tab1:
-    st.header("Task 1: AgentCore Runtime Validation")
+    st.header("Task 2: Awakening ARIA's Core Intelligence")
     st.markdown("This task validates if the AgentCore runtime is deployed and running.")
     
     with st.form("task1_form"):
@@ -151,7 +151,7 @@ with tab1:
 
 # Task 2 Tab - ECS Stack Validation
 with tab2:
-    st.header("Task 2: ECS Stack Validation")
+    st.header("Task 3: Building ARIA's Enterprise Platform")
     st.markdown("This task validates if the ECS CloudFormation stack is deployed successfully.")
     
     with st.form("task2_form"):
@@ -181,7 +181,7 @@ with tab2:
 
 # Task 3 Tab - Text Evaluation
 with tab3:
-    st.header("Task 3: Text Evaluation with Bedrock")
+    st.header("Task 4: Demonstrating ARIA's Real-World Magic")
     st.markdown("This task evaluates text content against a specific task using AI scoring criteria.")
     
     with st.form("task3_form"):
