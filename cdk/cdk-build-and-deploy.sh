@@ -15,6 +15,14 @@ fi
 set -a
 source ../.env
 set +a
+
+# Check if AGENTCORE_RUNTIME_ARN is set and not empty
+if [ -z "$AGENTCORE_RUNTIME_ARN" ]; then
+    echo "Error: AGENTCORE_RUNTIME_ARN is not set or empty in .env file"
+    echo "Please set AGENTCORE_RUNTIME_ARN in your sample_agentic_ai_strands/.env file before running this script"
+    exit 1
+fi
+
 export NODE_ENV=production
 # Configuration variables
 REGION="${AWS_REGION:-cn-northwest-1}"
