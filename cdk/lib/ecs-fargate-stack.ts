@@ -560,8 +560,8 @@ export class EcsFargateStack extends cdk.Stack {
 
     // 12. Create Frontend Task Definition
     const frontendTaskDefinition = new ecs.FargateTaskDefinition(this, `${prefix}-frontend-task`, {
-      memoryLimitMiB: 512*2,
-      cpu: 256*2,
+      memoryLimitMiB: 1024,
+      cpu: 512,
       taskRole: taskRole,
       executionRole: taskExecutionRole,
       runtimePlatform: {
@@ -572,7 +572,7 @@ export class EcsFargateStack extends cdk.Stack {
 
     const frontendContainer = frontendTaskDefinition.addContainer(`${prefix}-frontend-container`, {
       image: ecs.ContainerImage.fromEcrRepository(frontendRepo, 'latest'),
-      memoryLimitMiB: 512,
+      memoryLimitMiB: 1024,
       environment: {
         NODE_ENV: 'production',
         SERVER_MCP_BASE_URL: `http://${this.alb.loadBalancerDnsName}`,
@@ -604,8 +604,8 @@ export class EcsFargateStack extends cdk.Stack {
 
     // 13. Create Backend Task Definition
     const backendTaskDefinition = new ecs.FargateTaskDefinition(this, `${prefix}-backend-task`, {
-      memoryLimitMiB: 1024*4,
-      cpu: 512*2,
+      memoryLimitMiB: 1024,
+      cpu: 512,
       executionRole: taskExecutionRole,
       taskRole: taskRole,
       runtimePlatform: {
@@ -674,7 +674,7 @@ export class EcsFargateStack extends cdk.Stack {
 
     const backendContainer = backendTaskDefinition.addContainer(`${prefix}-backend-container`, {
       image: ecs.ContainerImage.fromEcrRepository(backendRepo, 'latest'),
-      memoryLimitMiB: 1024*4,
+      memoryLimitMiB: 1024,
       environment: backendEnvironment,
       secrets: backendSecrets,
       logging: ecs.LogDrivers.awsLogs({
