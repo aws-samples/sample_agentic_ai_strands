@@ -16,9 +16,9 @@ from strands.models.openai import OpenAIModel
 from strands.models import BedrockModel
 from chat_client import ChatClient
 from mcp_client_strands import StrandsMCPClient
-from strands.agent.conversation_manager import SlidingWindowConversationManager
 from botocore.config import Config
-# from custom_tools import mem0_memory
+from strands_hooks import StrandsInterceptor
+
 from strands_tools.code_interpreter import AgentCoreCodeInterpreter
 from custom_tools.memory_hook import AgentMemoryHooks
 from multi_agents.research_swarm import DeepResearchSwarm
@@ -303,9 +303,9 @@ class StrandsAgentClient(ChatClient):
         logger.info(f"loaded mcp_clients:{mcp_clients} / {mcp_server_ids}")
         # Get the model
         model = self._get_model(model_id,thinking=thinking, thinking_budget=thinking_budget,max_tokens=max_tokens, temperature=temperature)
-        
+    
         agent_hooks = []
-
+        agent_hooks.append(StrandsInterceptor())
         # 如果配置了PG Database,添加memory tool
         if use_mem:
             if os.environ.get("POSTGRESQL_HOST"): 
