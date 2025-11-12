@@ -334,12 +334,12 @@ class DeepResearchSwarm:
         
         prompt_parts.extend([
             "\nResearch Requirements:",
-            "1. Academic perspective with peer-reviewed sources",
-            "2. Industry analysis with market insights",
-            "3. Technical deep-dive with implementation details",
-            "4. Data-driven analysis with quantitative insights",
-            "5. Comprehensive synthesis with actionable recommendations",
-            "6. Fact-checking and validation of all claims",
+            # "1. Academic perspective with peer-reviewed sources",
+            # "2. Industry analysis with market insights",
+            "1. Technical deep-dive with implementation details",
+            "2. Data-driven analysis with quantitative insights",
+            "3. Comprehensive synthesis with actionable recommendations",
+            "4. Fact-checking and validation of all claims",
             "\nDeliver a structured report with executive summary, detailed findings, and recommendations."
         ])
         
