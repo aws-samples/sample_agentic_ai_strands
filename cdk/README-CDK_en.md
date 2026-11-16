@@ -26,7 +26,7 @@ This demonstration deployment architecture adheres to AWS best practices, deploy
 
 5. Security Components:
    • IAM roles and policies governing access permissions
-   • Secrets Manager generates and stores backend service API KEY configuration
+   • An Amazon Cognito user pool handles user sign-in (administrators create users)
    • Security groups controlling network traffic
 
 6. Container Images:
@@ -45,7 +45,8 @@ This demonstration deployment architecture adheres to AWS best practices, deploy
 - **ECR Repository**: Frontend and backend Docker image storage
 
 ### Security and Configuration
-- **Secrets Manager**: Generates and securely stores service API key configurations
+- **Amazon Cognito**: User pool and web app client; the backend verifies the access token on every request
+- **Secrets Manager**: Securely stores model and credential configurations
 - **IAM Roles**: Principle of least privilege
 - **Security Groups**: Network access control
 
@@ -117,11 +118,27 @@ MAX_TURNS=200
 INACTIVE_TIME=1440
 ```
 
+### Step 3: Configure HTTPS (required)
+Every request carries the signed-in user's Cognito access token, so the load balancer serves HTTPS only (port 443) and does not open port 80. Before deploying, set in `.env`:
+```bash
+CERTIFICATE_ARN=arn:aws:acm:<region>:<account>:certificate/<id>   # ACM certificate issued or imported in the deployment region
+DOMAIN_NAME=agent.example.com                                       # host name the certificate covers
+```
+After deployment, point a DNS record for `DOMAIN_NAME` (CNAME or Route 53 alias) at the `AlbDnsName` stack output, then open `https://<DOMAIN_NAME>/chat`.
+For short-lived tests only, set `ALLOW_INSECURE_HTTP=true` to use plain HTTP on port 80; sign-in tokens are then sent unencrypted.
+
 ### Deployment Script
 ```bash
 cd cdk
 bash cdk-build-and-deploy.sh
 ```
+
+### Step 4: Create Users
+Self sign-up is disabled. After deployment, create users with the `CognitoUserPoolId` stack output; they set a new password at first sign-in:
+```bash
+aws cognito-idp admin-create-user --user-pool-id <CognitoUserPoolId> --username you@example.com
+```
+Cognito user pools are not available in China regions: before deploying, set `COGNITO_USER_POOL_ID` and `COGNITO_APP_CLIENT_ID` to an existing user pool in a global region and an app client without a client secret.
 
 ### Step 5: Update Services
 ```bash

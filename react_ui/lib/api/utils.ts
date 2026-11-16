@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import fetch from 'node-fetch';
-import { getApiKey } from '../../lib/server/secrets';
 
 // Base URL for the MCP server backend (internal only)
 // Using localhost works with both direct deployment and Docker with host network mode
@@ -11,24 +10,17 @@ const MCP_BASE_URL = process.env.SERVER_MCP_BASE_URL || 'http://localhost:7002';
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 // Get standardized headers for backend requests
-// SECURITY: API key is injected server-side and never exposed to clients
+// SECURITY: forward the caller's own Cognito access token. The backend verifies it
+// and derives the user ID from it; this proxy adds no credential of its own and
+// forwards no client-chosen identity header (e.g. X-User-ID).
 export const getBackendHeaders = async (req: NextApiRequest) => {
-  // Get API key from server-side secure storage
-  const apiKey = await getApiKey();
-
-  if (!apiKey) {
-    throw new Error('API key not configured on server');
-  }
-
-  // Build headers with server-side API key
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${apiKey}`, // Server-side authentication
   };
 
-  // Forward user ID header if present
-  if (req.headers['x-user-id']) {
-    headers['X-User-ID'] = req.headers['x-user-id'] as string;
+  const authorization = req.headers['authorization'];
+  if (typeof authorization === 'string' && authorization.startsWith('Bearer ')) {
+    headers['Authorization'] = authorization;
   }
 
   return headers;

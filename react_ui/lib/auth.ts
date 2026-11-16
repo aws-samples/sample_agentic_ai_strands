@@ -1,29 +1,33 @@
+import { getAccessToken } from './cognito';
+
 /**
  * SECURITY NOTE: API keys should NEVER be exposed to the client.
  * This function is deprecated and should not be used in client-side code.
- * All API requests should go through server-side API routes that handle authentication.
  *
- * @deprecated Use server-side API routes with proper authentication instead
+ * @deprecated Requests are authenticated with the signed-in user's Cognito access token.
  */
 export async function getApiKey(): Promise<string> {
   throw new Error(
     'SECURITY: Direct API key access is disabled. ' +
-    'Use server-side API routes with proper authentication instead.'
+    'Requests are authenticated with the Cognito access token instead.'
   );
 }
 
 /**
- * Get auth headers for server-side API requests
- * All authentication is handled server-side via API routes
+ * Get auth headers for backend API requests.
  *
- * @param userId - The user ID to include in headers
- * @returns Headers object with user ID for server-side authentication
+ * The backend identifies the user ONLY from the verified Cognito access token
+ * (its `sub` claim). No client-chosen user ID is sent.
+ *
+ * @param _userId - Unused; kept so existing call sites compile.
  */
-export const getAuthHeaders = async (userId: string) => {
-  // Authentication is handled server-side by API routes
-  // Client only needs to pass the user ID
-  return {
-    'X-User-ID': userId,
+export const getAuthHeaders = async (_userId?: string) => {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json'
+  };
+  const token = await getAccessToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
+  return headers;
 }

@@ -1,4 +1,5 @@
 import { ChatProvider } from '@/components/providers/ChatProvider'
+import { AuthGate } from '@/components/providers/AuthGate'
 
 export default function ChatLayout({
   children,
@@ -6,8 +7,10 @@ export default function ChatLayout({
   children: React.ReactNode
 }) {
   return (
-    <ChatProvider>
-      {children}
-    </ChatProvider>
+    <AuthGate>
+      <ChatProvider>
+        {children}
+      </ChatProvider>
+    </AuthGate>
   )
 }

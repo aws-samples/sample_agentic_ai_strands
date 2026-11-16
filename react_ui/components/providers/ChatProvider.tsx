@@ -3,53 +3,21 @@
 import { useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { fetchModels, fetchMcpServers } from '@/lib/api/chat';
-import { v4 as uuidv4 } from 'uuid';
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { 
     userId, 
-    setUserId, 
     setModels, 
     setSelectedModel, 
     setMcpServers 
   } = useStore();
 
-  // Initialize app - load models, servers, and ensure userId exists
+  // Initialize app - load models and servers for the signed-in user
   useEffect(() => {
     async function initialize() {
-      // Initialize user ID
-      if (!userId) {
-        // Check if user ID exists in localStorage
-        let storedUserId = localStorage.getItem('mcp_chat_user_id');
-        if (storedUserId) {
-          // Try to parse the stored ID in case it's a JSON object
-          try {
-            const parsedId = JSON.parse(storedUserId);
-            // If it's an object with the expected key, extract the actual ID
-            if (parsedId && typeof parsedId === 'object' && parsedId.mcp_chat_user_id) {
-              storedUserId = parsedId.mcp_chat_user_id;
-            }
-          } catch (e) {
-            // If parsing fails, assume it's a plain string ID and continue
-          }
-          
-          // Ensure we have a valid string before setting the user ID
-          if (storedUserId) {
-            setUserId(storedUserId);
-          } else {
-            // If for some reason the ID is not valid, generate a new one
-            const newUserId = uuidv4().substring(0, 8);
-            setUserId(newUserId);
-            localStorage.setItem('mcp_chat_user_id', newUserId);
-          }
-        } else {
-          // Generate new random user ID
-          const newUserId = uuidv4().substring(0, 8);
-          setUserId(newUserId);
-          localStorage.setItem('mcp_chat_user_id', newUserId);
-        }
-      }
-      
+      // The user ID is set by AuthGate from the signed-in Cognito user.
+      if (!userId) return;
+
       // Load models
       try {
         const modelList = await fetchModels();
@@ -83,7 +51,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
     
     initialize();
-  }, [userId, setUserId, setModels, setSelectedModel, setMcpServers]);
+  }, [userId, setModels, setSelectedModel, setMcpServers]);
 
   return <>{children}</>;
 }

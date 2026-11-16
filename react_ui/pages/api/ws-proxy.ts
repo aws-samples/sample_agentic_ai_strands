@@ -70,9 +70,6 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       if (req.headers.authorization) {
         proxyReq.setHeader('Authorization', req.headers.authorization);
       }
-      if (req.headers['x-user-id']) {
-        proxyReq.setHeader('X-User-ID', req.headers['x-user-id']);
-      }
     });
 
     // Proxy the request - will automatically handle WebSocket upgrades

@@ -25,7 +25,7 @@
 
 5. 安全组件：
  • IAM角色和策略控制访问权限
- • Secrets Manager生成并存储后端服务API KEY配置信息
+ • Amazon Cognito用户池负责用户登录（仅管理员可创建用户）
  • 安全组控制网络流量
 
 6. 容器镜像：
@@ -44,7 +44,8 @@
 - **ECR 仓库**: 前端和后端 Docker 镜像存储
 
 ### 安全和配置
-- **Secrets Manager**: 生成并安全存储服务api key配置
+- **Amazon Cognito**: 用户池和Web应用客户端，后端校验每个请求的访问令牌
+- **Secrets Manager**: 安全存储模型和凭证配置
 - **IAM 角色**: 最小权限原则
 - **安全组**: 网络访问控制
 
@@ -118,11 +119,27 @@ MAX_TURNS=200
 INACTIVE_TIME=1440
 ```
 
+### 步骤 3: 配置HTTPS（必填）
+用户登录后每个请求都携带Cognito访问令牌，因此负载均衡器只提供HTTPS（443端口），不开放80端口。部署前在`.env`中设置：
+```bash
+CERTIFICATE_ARN=arn:aws:acm:<region>:<account>:certificate/<id>   # 部署区域内ACM签发或导入的证书
+DOMAIN_NAME=agent.example.com                                       # 证书覆盖的域名
+```
+部署完成后，把`DOMAIN_NAME`的DNS记录（CNAME或Route 53 Alias）指向Stack输出的`AlbDnsName`，然后访问`https://<DOMAIN_NAME>/chat`。
+仅用于短期测试时，可以设置`ALLOW_INSECURE_HTTP=true`改用80端口HTTP，此时登录令牌以明文传输。
+
 ### 部署脚本
 ```bash
 cd cdk
 bash cdk-build-and-deploy.sh
 ```
+
+### 步骤 4: 创建登录用户
+用户池不开放自助注册。部署完成后，用Stack输出的`CognitoUserPoolId`创建用户，用户首次登录时设置新密码：
+```bash
+aws cognito-idp admin-create-user --user-pool-id <CognitoUserPoolId> --username you@example.com
+```
+中国区不提供Cognito用户池：部署前设置`COGNITO_USER_POOL_ID`和`COGNITO_APP_CLIENT_ID`，指向全球区域已有的用户池和不带client secret的应用客户端。
 
 ### 步骤 5: 更新服务
 ```bash

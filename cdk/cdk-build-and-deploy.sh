@@ -340,6 +340,12 @@ ALB_DNS=$(aws cloudformation describe-stacks \
     --query 'Stacks[0].Outputs[?OutputKey==`AlbDnsName`].OutputValue' \
     --output text)
 
+FRONTEND_URL=$(aws cloudformation describe-stacks \
+    --stack-name $STACK_NAME \
+    --region $REGION \
+    --query 'Stacks[0].Outputs[?OutputKey==`FrontendUrl`].OutputValue' \
+    --output text)
+
 CLUSTER_NAME=$(aws cloudformation describe-stacks \
     --stack-name $STACK_NAME \
     --region $REGION \
@@ -406,8 +412,9 @@ EOF
 
 echo "部署信息："
 echo "- ALB DNS: $ALB_DNS"
-echo "- 前端访问地址: http://$ALB_DNS"
-echo "- 后端 API 地址: http://$ALB_DNS/api"
+echo "- 前端访问地址: $FRONTEND_URL"
+echo "  （使用 HTTPS 时，请把 DOMAIN_NAME 的 DNS 记录（CNAME/Alias）指向 $ALB_DNS）"
+echo "- 创建登录用户: aws cognito-idp admin-create-user --user-pool-id <CognitoUserPoolId> --username you@example.com --region $REGION"
 echo "- ECS 集群: $CLUSTER_NAME"
 echo ""
 echo "监控链接："

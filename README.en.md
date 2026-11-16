@@ -105,6 +105,23 @@ OPENAI_BASE_URL=https://api.siliconflow.cn/v1
   }
 ```
 
+### 2.4 Create a Cognito User Pool (User Authentication)
+Every API request must carry the signed-in user's Amazon Cognito access token. The backend verifies the token signature and takes the user ID from the token's `sub` claim; it never trusts a user ID supplied by the client. A CDK deployment creates the user pool for you; for local development create one manually:
+```bash
+# Create the user pool (only administrators can create users, sign in with email)
+aws cognito-idp create-user-pool --pool-name strands-mcp-users \
+    --username-attributes email --auto-verified-attributes email \
+    --admin-create-user-config AllowAdminCreateUserOnly=true \
+    --policies 'PasswordPolicy={MinimumLength=12,RequireUppercase=true,RequireLowercase=true,RequireNumbers=true,RequireSymbols=true}'
+# Create an app client without a client secret (note the UserPool Id and ClientId in the output)
+aws cognito-idp create-user-pool-client --user-pool-id <UserPoolId> --client-name web \
+    --no-generate-secret --explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+    --prevent-user-existence-errors ENABLED
+# Create a user (they set a new password at first sign-in)
+aws cognito-idp admin-create-user --user-pool-id <UserPoolId> --username you@example.com
+```
+Put `COGNITO_USER_POOL_ID` and `COGNITO_APP_CLIENT_ID` in both the backend `.env` and the frontend `react_ui/.env.local`. Cognito user pools are not available in China regions; use a user pool in a global region.
+
 ### 2.4 Create a DynamoDB Table Named mcp_user_config_table
 ```bash
 aws dynamodb create-table \
@@ -190,7 +207,7 @@ This demo's deployment architecture follows AWS best practices, deploying the ap
 
 5. Security Components:
    • IAM roles and policies control access permissions
-   • Secrets Manager generates and stores backend service API KEY configuration
+   • An Amazon Cognito user pool handles user sign-in; the backend verifies the access token on every request. After deployment, create users with the `CognitoUserPoolId` stack output: `aws cognito-idp admin-create-user --user-pool-id <CognitoUserPoolId> --username you@example.com`
    • Security groups control network traffic
 
 6. Container Images:

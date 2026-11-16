@@ -31,16 +31,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       headers['Authorization'] = req.headers.authorization as string;
     }
 
-    if (req.headers['x-user-id']) {
-      headers['X-User-ID'] = req.headers['x-user-id'] as string;
-    }
-
     // Set a timeout for the request to prevent blocking
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
     // Make the request to the backend
-    const response = await fetch(`${MCP_BASE_URL}/v1/stop/stream/${streamId}`, {
+    const response = await fetch(`${MCP_BASE_URL}/v1/stop/stream/${encodeURIComponent(String(streamId))}`, {
       method: 'POST',
       headers: headers,
       signal: controller.signal,

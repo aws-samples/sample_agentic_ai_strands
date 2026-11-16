@@ -81,8 +81,9 @@ cp env.example .env
 ```bash
 # for Development mode - ddb for user config
 ddb_table=mcp_user_config_table
-# for Development mode - API Key for server authentication, if you deploy with CDK, it will create a Api key automatically
-API_KEY=123456
+# 用户认证 - Amazon Cognito 用户池（必填，见2.4节；CDK部署会自动创建并设置）
+COGNITO_USER_POOL_ID=
+COGNITO_APP_CLIENT_ID=
 # =============================================================================
 # AWS Infra CONFIGURATION
 # The default ECS platform is arm64, you can choose linux/amd64 
@@ -155,6 +156,23 @@ EMBEDDING_MODEL=Pro/BAAI/bge-m3
     "model_name": "DeepSeek-V3-free"
   }
 ```
+
+### 2.4 创建Cognito用户池（用户认证）
+所有API请求都必须携带已登录用户的Amazon Cognito访问令牌（access token），后端验证令牌签名后，从令牌的`sub`声明中取得用户ID，不信任客户端传入的任何用户ID。使用CDK部署时会自动创建用户池；本地开发需要手动创建：
+```bash
+# 创建用户池（仅管理员可创建用户，邮箱登录）
+aws cognito-idp create-user-pool --pool-name strands-mcp-users \
+    --username-attributes email --auto-verified-attributes email \
+    --admin-create-user-config AllowAdminCreateUserOnly=true \
+    --policies 'PasswordPolicy={MinimumLength=12,RequireUppercase=true,RequireLowercase=true,RequireNumbers=true,RequireSymbols=true}'
+# 创建不带client secret的应用客户端（记下输出中的UserPool Id和ClientId）
+aws cognito-idp create-user-pool-client --user-pool-id <UserPoolId> --client-name web \
+    --no-generate-secret --explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+    --prevent-user-existence-errors ENABLED
+# 创建用户（用户首次登录时设置新密码）
+aws cognito-idp admin-create-user --user-pool-id <UserPoolId> --username you@example.com
+```
+把`COGNITO_USER_POOL_ID`和`COGNITO_APP_CLIENT_ID`同时写入后端`.env`和前端`react_ui/.env.local`。中国区不提供Cognito用户池，请使用全球区域的用户池。
 
 ### 2.4 创建一个dynamodb table, 名称为`mcp_user_config_table`
 ```bash
@@ -241,7 +259,7 @@ docker-compose up -d --build
 
 5. 安全组件：
  • IAM角色和策略控制访问权限
- • Secrets Manager生成并存储后端服务API KEY配置信息
+ • Amazon Cognito用户池负责用户登录，后端校验每个请求的访问令牌。部署完成后用Stack输出的`CognitoUserPoolId`创建用户：`aws cognito-idp admin-create-user --user-pool-id <CognitoUserPoolId> --username you@example.com`
  • 安全组控制网络流量
 
 6. 容器镜像：
