@@ -120,6 +120,11 @@ ALB_DNS=$(aws cloudformation describe-stacks \
     --region $REGION \
     --query 'Stacks[0].Outputs[?OutputKey==`AlbDnsName`].OutputValue' \
     --output text 2>/dev/null || echo "无法获取ALB DNS")
+FRONTEND_URL=$(aws cloudformation describe-stacks \
+    --stack-name McpEcsFargateStack \
+    --region $REGION \
+    --query 'Stacks[0].Outputs[?OutputKey==`FrontendUrl`].OutputValue' \
+    --output text 2>/dev/null || echo "无法获取前端地址")
 
 echo "部署信息："
 echo "- 集群名称: $CLUSTER_NAME"
@@ -128,7 +133,6 @@ echo "- 后端服务: $BACKEND_SERVICE"
 echo "- ALB DNS: $ALB_DNS"
 echo ""
 echo "访问地址："
-echo "- 前端: http://$ALB_DNS/chat"
-echo "- 后端API: http://$ALB_DNS/v1/"
+echo "- 前端: $FRONTEND_URL"
 echo ""
 echo "🎉 ECS 服务更新成功！"

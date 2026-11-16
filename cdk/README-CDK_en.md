@@ -118,6 +118,15 @@ MAX_TURNS=200
 INACTIVE_TIME=1440
 ```
 
+### Step 3: Configure HTTPS (required)
+Every request carries the signed-in user's Cognito access token, so the load balancer serves HTTPS only (port 443) and does not open port 80. Before deploying, set in `.env`:
+```bash
+CERTIFICATE_ARN=arn:aws:acm:<region>:<account>:certificate/<id>   # ACM certificate issued or imported in the deployment region
+DOMAIN_NAME=agent.example.com                                       # host name the certificate covers
+```
+After deployment, point a DNS record for `DOMAIN_NAME` (CNAME or Route 53 alias) at the `AlbDnsName` stack output, then open `https://<DOMAIN_NAME>/chat`.
+For short-lived tests only, set `ALLOW_INSECURE_HTTP=true` to use plain HTTP on port 80; sign-in tokens are then sent unencrypted.
+
 ### Deployment Script
 ```bash
 cd cdk

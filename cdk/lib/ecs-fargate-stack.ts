@@ -31,6 +31,24 @@ export class EcsFargateStack extends cdk.Stack {
     const isChinaRegion = region.startsWith('cn-');
     // Service principal domain suffix differs between global and China regions
     const servicePrincipalSuffix = isChinaRegion ? 'amazonaws.com.cn' : 'amazonaws.com';
+
+    // Public endpoint TLS. Users sign in and send Cognito access tokens on every request,
+    // so the load balancer serves HTTPS only. Provide an ACM certificate (issued or imported
+    // in this region) and the domain name it covers; point that name at the ALB (CNAME/alias).
+    const certificateArn = (process.env.CERTIFICATE_ARN || '').trim();
+    const domainName = (process.env.DOMAIN_NAME || '').trim();
+    const allowInsecureHttp = process.env.ALLOW_INSECURE_HTTP === 'true';
+    if (certificateArn && !domainName) {
+      throw new Error('DOMAIN_NAME must be set together with CERTIFICATE_ARN (the host name the certificate covers).');
+    }
+    if (!certificateArn && !allowInsecureHttp) {
+      throw new Error(
+        'Set CERTIFICATE_ARN and DOMAIN_NAME to serve the app over HTTPS. ' +
+        'Without them, sign-in tokens would cross the internet in plain text. ' +
+        'For a short-lived test only, set ALLOW_INSECURE_HTTP=true to deploy an HTTP listener on port 80.'
+      );
+    }
+    const useHttps = !!certificateArn;
     
     // Determine CPU architecture based on PLATFORM environment variable
     const platform = process.env.PLATFORM || 'linux/arm64'; // Default to ARM64
@@ -185,17 +203,20 @@ export class EcsFargateStack extends cdk.Stack {
       allowAllOutbound: true,
     });
 
-    albSecurityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(80),
-      'Allow HTTP traffic'
-    );
-
-    albSecurityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(443),
-      'Allow HTTPS traffic'
-    );
+    // Open only the port the listener serves: 443 with HTTPS, 80 only for an explicit insecure test deployment.
+    if (useHttps) {
+      albSecurityGroup.addIngressRule(
+        ec2.Peer.anyIpv4(),
+        ec2.Port.tcp(443),
+        'Allow HTTPS traffic'
+      );
+    } else {
+      albSecurityGroup.addIngressRule(
+        ec2.Peer.anyIpv4(),
+        ec2.Port.tcp(80),
+        'Allow HTTP traffic (ALLOW_INSECURE_HTTP=true, test only)'
+      );
+    }
 
     const ecsSecurityGroup = new ec2.SecurityGroup(this, `${prefix}-ecs-sg`, {
       vpc: this.vpc,
@@ -379,11 +400,20 @@ export class EcsFargateStack extends cdk.Stack {
     });
 
     // 8. Create ALB Listener with routing rules
-    const listener = this.alb.addListener(`${prefix}-listener`, {
-      port: 80,
-      protocol: elbv2.ApplicationProtocol.HTTP,
-      defaultTargetGroups: [frontendTargetGroup],
-    });
+    const listener = useHttps
+      ? this.alb.addListener(`${prefix}-https-listener`, {
+          port: 443,
+          protocol: elbv2.ApplicationProtocol.HTTPS,
+          certificates: [elbv2.ListenerCertificate.fromArn(certificateArn)],
+          sslPolicy: elbv2.SslPolicy.RECOMMENDED_TLS,
+          defaultTargetGroups: [frontendTargetGroup],
+        })
+      : this.alb.addListener(`${prefix}-listener`, {
+          port: 80,
+          protocol: elbv2.ApplicationProtocol.HTTP,
+          defaultTargetGroups: [frontendTargetGroup],
+        });
+    const publicUrl = useHttps ? `https://${domainName}` : `http://${this.alb.loadBalancerDnsName}`;
 
     listener.addTargetGroups(`${prefix}-backend-rule-v1`, {
       priority: 100,
@@ -572,7 +602,7 @@ export class EcsFargateStack extends cdk.Stack {
       memoryLimitMiB: 512,
       environment: {
         NODE_ENV: 'production',
-        SERVER_MCP_BASE_URL: `http://${this.alb.loadBalancerDnsName}`,
+        SERVER_MCP_BASE_URL: publicUrl,
         NEXT_PUBLIC_MCP_BASE_URL: '/api',
         // Public identifiers served to the browser by /api/auth/config
         COGNITO_USER_POOL_ID: userPoolId,
@@ -746,12 +776,12 @@ export class EcsFargateStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'FrontendUrl', {
-      value: `http://${this.alb.loadBalancerDnsName}`,
+      value: `${publicUrl}/chat`,
       description: 'Frontend Application URL',
     });
 
     new cdk.CfnOutput(this, 'BackendApiUrl', {
-      value: `http://${this.alb.loadBalancerDnsName}/api`,
+      value: `${publicUrl}/v1`,
       description: 'Backend API URL',
     });
 

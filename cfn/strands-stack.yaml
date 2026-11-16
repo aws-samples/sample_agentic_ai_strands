@@ -14,6 +14,8 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AdministratorAccess
+        # Shell and port forwarding through Session Manager (no inbound ports needed)
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
 
   MCPInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -25,16 +27,9 @@ Resources:
   MCPSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow SSH and port 3000 only
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 3000
-          ToPort: 3000
-          CidrIp: 0.0.0.0/0
+      # No inbound rules: connect with AWS Systems Manager Session Manager instead of
+      # exposing SSH (22) or the web UI (3000) to the internet. See the Outputs below.
+      GroupDescription: No inbound access; use Session Manager for shell and port forwarding
 
   MCPInstance:
     Type: AWS::EC2::Instance
@@ -126,3 +121,9 @@ Outputs:
   PublicIP:
     Description: Public IP address of the newly created EC2 instance
     Value: !GetAtt MCPInstance.PublicIp
+  ShellCommand:
+    Description: Open a shell on the instance (requires the Session Manager plugin for the AWS CLI)
+    Value: !Sub 'aws ssm start-session --region ${AWS::Region} --target ${MCPInstance}'
+  WebUiPortForwardCommand:
+    Description: Forward the web UI to http://localhost:3000 on your computer
+    Value: !Sub 'aws ssm start-session --region ${AWS::Region} --target ${MCPInstance} --document-name AWS-StartPortForwardingSession --parameters portNumber=3000,localPortNumber=3000'

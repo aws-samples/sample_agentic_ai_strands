@@ -119,6 +119,15 @@ MAX_TURNS=200
 INACTIVE_TIME=1440
 ```
 
+### 步骤 3: 配置HTTPS（必填）
+用户登录后每个请求都携带Cognito访问令牌，因此负载均衡器只提供HTTPS（443端口），不开放80端口。部署前在`.env`中设置：
+```bash
+CERTIFICATE_ARN=arn:aws:acm:<region>:<account>:certificate/<id>   # 部署区域内ACM签发或导入的证书
+DOMAIN_NAME=agent.example.com                                       # 证书覆盖的域名
+```
+部署完成后，把`DOMAIN_NAME`的DNS记录（CNAME或Route 53 Alias）指向Stack输出的`AlbDnsName`，然后访问`https://<DOMAIN_NAME>/chat`。
+仅用于短期测试时，可以设置`ALLOW_INSECURE_HTTP=true`改用80端口HTTP，此时登录令牌以明文传输。
+
 ### 部署脚本
 ```bash
 cd cdk
