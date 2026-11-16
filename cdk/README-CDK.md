@@ -25,7 +25,7 @@
 
 5. 安全组件：
  • IAM角色和策略控制访问权限
- • Secrets Manager生成并存储后端服务API KEY配置信息
+ • Amazon Cognito用户池负责用户登录（仅管理员可创建用户）
  • 安全组控制网络流量
 
 6. 容器镜像：
@@ -44,7 +44,8 @@
 - **ECR 仓库**: 前端和后端 Docker 镜像存储
 
 ### 安全和配置
-- **Secrets Manager**: 生成并安全存储服务api key配置
+- **Amazon Cognito**: 用户池和Web应用客户端，后端校验每个请求的访问令牌
+- **Secrets Manager**: 安全存储模型和凭证配置
 - **IAM 角色**: 最小权限原则
 - **安全组**: 网络访问控制
 
@@ -123,6 +124,13 @@ INACTIVE_TIME=1440
 cd cdk
 bash cdk-build-and-deploy.sh
 ```
+
+### 步骤 4: 创建登录用户
+用户池不开放自助注册。部署完成后，用Stack输出的`CognitoUserPoolId`创建用户，用户首次登录时设置新密码：
+```bash
+aws cognito-idp admin-create-user --user-pool-id <CognitoUserPoolId> --username you@example.com
+```
+中国区不提供Cognito用户池：部署前设置`COGNITO_USER_POOL_ID`和`COGNITO_APP_CLIENT_ID`，指向全球区域已有的用户池和不带client secret的应用客户端。
 
 ### 步骤 5: 更新服务
 ```bash

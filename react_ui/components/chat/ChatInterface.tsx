@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useStore } from '@/lib/store';
-import { v4 as uuidv4 } from 'uuid';
 import { fetchMcpServers } from '@/lib/api/chat';
 
 export default function ChatInterface() {
@@ -12,23 +11,9 @@ export default function ChatInterface() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const loadedRef = useRef<boolean>(false);
   
-  const { userId, setUserId, mcpServers, setMcpServers } = useStore();
+  const { mcpServers, setMcpServers } = useStore();
   
-  // Initialize userId if not set
-  useEffect(() => {
-    if (!userId) {
-      // Check if user ID exists in localStorage
-      const storedUserId = localStorage.getItem('mcp_chat_user_id');
-      if (storedUserId) {
-        setUserId(storedUserId);
-      } else {
-        // Generate new random user ID
-        const newUserId = uuidv4().substring(0, 8);
-        setUserId(newUserId);
-        localStorage.setItem('mcp_chat_user_id', newUserId);
-      }
-    }
-  }, [userId, setUserId]);
+  // The user ID is set by AuthGate from the signed-in Cognito user.
   
   // Fetch MCP servers when component mounts - only run once
   useEffect(() => {

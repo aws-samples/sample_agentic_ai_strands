@@ -6,6 +6,31 @@ This guide helps you upgrade existing deployments to the new secure architecture
 
 ## Critical Changes
 
+### User Authentication with Amazon Cognito (BREAKING)
+
+#### What Changed
+- The backend no longer accepts the shared `API_KEY`, and it ignores the `X-User-ID` header.
+  Previously any holder of the shared key could set `X-User-ID` to another user's ID and read
+  or change that user's chat history and MCP server configurations (CWE-287 / CWE-639).
+- Every request must carry the signed-in user's Cognito **access token**
+  (`Authorization: Bearer <token>`). The backend verifies the signature (JWKS), issuer, expiry,
+  `token_use=access` and `client_id`, and takes the user ID from the `sub` claim.
+- The web UI signs users in with Amazon Cognito (Amplify Authenticator). The editable
+  "User ID" field is replaced by the signed-in user and a Sign out button.
+- The CDK stack creates a Cognito user pool (admin-created users only) and app client, and no
+  longer creates or injects the `<prefix>/api-key` secret.
+
+#### Migration Steps
+1. Set `COGNITO_USER_POOL_ID` and `COGNITO_APP_CLIENT_ID` for both the backend and the
+   frontend (CDK does this for you). If either is missing, the backend rejects every request.
+2. Remove `API_KEY` and `NEXT_PUBLIC_API_KEY` from your environment files.
+3. Create users: `aws cognito-idp admin-create-user --user-pool-id <id> --username <email>`.
+4. Existing chat history and per-user MCP server configurations were stored under the old
+   client-generated IDs and are not visible under the new Cognito user IDs.
+5. Scripts that call the API directly must send a Cognito access token instead of the API key
+   (see `tests/test_chat_api.sh`).
+
+
 ### 1. API Key Handling
 
 **BREAKING CHANGE**: API keys are no longer exposed to clients.

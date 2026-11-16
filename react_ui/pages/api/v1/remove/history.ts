@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getBaseUrl } from '@/lib/api/chat';
-import { getAuthHeaders } from '@/lib/auth'
+import { getBackendHeaders } from '@/lib/api/utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -8,19 +8,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Get user ID from headers
-    const userId = req.headers['x-user-id'] as string;
-    if (!userId) {
-      return res.status(400).json({ errno: 1, msg: 'User ID is required' });
-    }
-
-    // Forward the request to the backend
+    // Forward the request to the backend with the caller's own access token.
+    // The backend derives the user ID from the verified token.
     const baseUrl = getBaseUrl();
     const url = `${baseUrl.replace(/\/$/, '')}/v1/remove/history`;
     
     const response = await fetch(url, {
       method: 'POST',
-      headers: await getAuthHeaders(userId)
+      headers: await getBackendHeaders(req)
     });
     
     // Get response from backend

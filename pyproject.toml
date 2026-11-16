@@ -25,5 +25,6 @@ dependencies = [
     "strands-agents-tools==0.2.3",
     "strands-agents-tools[mem0_memory]",
     "rich>=13.7.1",
-    "psycopg2-binary>=2.9.10"
+    "psycopg2-binary>=2.9.10",
+    "pyjwt[crypto]>=2.10.1"
 ]

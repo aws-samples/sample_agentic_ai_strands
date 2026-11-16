@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useStore } from '@/lib/store'
-import { v4 as uuidv4 } from 'uuid'
+import { signOut } from '@/lib/cognito'
 import ModelSelector from './model-selector'
 import ServerList from './server-list'
 import AddServerDialog from './add-server-dialog'
 import { Switch } from '@/components/ui/switch'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
 
 interface SidebarProps {
   onClose: () => void
@@ -16,7 +16,6 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<'chat' | 'servers'>('chat')
   const [showAddServer, setShowAddServer] = useState(false)
-  const [userIdInput, setUserIdInput] = useState('')
   
   const { 
     systemPrompt, 
@@ -35,33 +34,12 @@ export default function Sidebar({ onClose }: SidebarProps) {
     setUseSwarm,
     clearMessages,
     userId,
-    setUserId,
     budgetTokens,
     setBudgetTokens,
     onlyNMostRecentImages,
     setOnlyNMostRecentImages
   } = useStore()
   
-  // Initialize user ID input field when component mounts or userId changes
-  useEffect(() => {
-    if (userId) {
-      setUserIdInput(userId)
-    }
-  }, [userId])
-  
-  // Function to generate random user ID
-  const generateRandomUserId = () => {
-    const newId = uuidv4().substring(0, 8)
-    setUserId(newId)
-    setUserIdInput(newId)
-    localStorage.setItem('mcp_chat_user_id', newId)
-  }
-  
-  // Function to save user ID when manually changed
-  const saveUserId = () => {
-    setUserId(userIdInput)
-    localStorage.setItem('mcp_chat_user_id', userIdInput)
-  }
 
   return (
     <div className="h-full flex flex-col">
@@ -106,32 +84,20 @@ export default function Sidebar({ onClose }: SidebarProps) {
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'chat' ? (
           <div className="space-y-6">
-            {/* User ID */}
+            {/* Signed-in user (identity comes from Cognito, not editable) */}
             <div className="space-y-2">
-              <label htmlFor="user-id" className="text-sm font-medium flex justify-between items-center">
-                User ID
+              <span className="text-sm font-medium">Signed in as</span>
+              <div className="flex gap-2 items-center">
+                <span className="flex-1 truncate px-3 py-2 text-sm rounded-md border border-input bg-background" title={userId}>
+                  {userId}
+                </span>
                 <button
-                  onClick={generateRandomUserId}
-                  className="text-xs bg-secondary hover:bg-secondary/80 px-2 py-1 rounded-md"
-                  title="Generate random user ID"
+                  onClick={() => signOut()}
+                  className="px-3 py-2 bg-secondary hover:bg-secondary/80 rounded-md text-sm flex items-center gap-1"
+                  title="Sign out"
                 >
-                  🔄 Randomize
-                </button>
-              </label>
-              <div className="flex gap-2">
-                <input
-                  id="user-id"
-                  type="text"
-                  value={userIdInput}
-                  onChange={(e) => setUserIdInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background"
-                  maxLength={32}
-                />
-                <button
-                  onClick={saveUserId}
-                  className="px-3 py-1 bg-primary text-primary-foreground rounded-md text-sm"
-                >
-                  Save
+                  <LogOut className="h-4 w-4" />
+                  Sign out
                 </button>
               </div>
             </div>

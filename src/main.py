@@ -29,7 +29,7 @@ from utils import  (get_global_server_configs,
                     save_user_server_config)
 from security import validate_mcp_server_config, SecurityValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials
 from fastapi import Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -39,6 +39,7 @@ from fastapi import APIRouter
 from utils import is_endpoint_sse,save_stream_id,get_stream_id,active_streams,delete_stream_id,delete_user_session,get_user_session,save_user_session
 from data_types import *
 from health import router as health_router
+from auth import authenticate, bearer_scheme
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,9 +60,8 @@ user_sessions = {}
 
 MAX_TURNS = int(os.environ.get("MAX_TURNS",200))
 INACTIVE_TIME = int(os.environ.get("INACTIVE_TIME",60*24))  #mins
-API_KEY = os.environ.get("API_KEY")
-
-security = HTTPBearer()
+# Every request is authenticated with a Cognito access token (see auth.py).
+security = bearer_scheme
 
 
 # 用户会话管理
@@ -100,10 +100,14 @@ class UserSession:
     
 
 
-async def get_api_key(auth: HTTPAuthorizationCredentials = Security(security)):
-    if auth.credentials == API_KEY:
-        return auth.credentials
-    raise HTTPException(status_code=403, detail="Could not validate credentials")
+async def get_authenticated_user_id(auth: Optional[HTTPAuthorizationCredentials]) -> str:
+    """Verify the Cognito access token and return the caller's user id (the `sub` claim).
+
+    SECURITY: the user identity comes only from the verified token, never from a
+    client-supplied header such as X-User-ID.
+    """
+    user = await authenticate(auth)
+    return user.user_id
 
             
 async def initialize_user_servers(session: UserSession):
@@ -157,13 +161,10 @@ async def get_or_create_user_session(
     auth: HTTPAuthorizationCredentials = Security(security),
     create_new = True
 ):
-    """获取或创建用户会话，优先使用X-User-ID头，并自动初始化用户服务器"""
+    """获取或创建用户会话（用户ID取自已验证的Cognito令牌），并自动初始化用户服务器"""
     global user_sessions
-    # 先验证API密钥
-    await get_api_key(auth)
-    
-    # 尝试从请求头获取用户ID，如果不存在则使用API密钥作为备用ID
-    user_id = request.headers.get("X-User-ID", auth.credentials)
+    # 验证Cognito访问令牌，用户ID只取自令牌的sub声明
+    user_id = await get_authenticated_user_id(auth)
     
     session_obj = await get_user_session(user_id)
     if not session_obj and not create_new:
@@ -263,7 +264,6 @@ else:
         "http://localhost:3001",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
-        "*"
     ]
 
 logger.info(f"CORS allowed origins: {allowed_origins}")
@@ -276,7 +276,6 @@ app.add_middleware(
     allow_headers=[
         "Content-Type",
         "Authorization",
-        "X-User-ID",
         "X-Stream-ID",
         "Cache-Control"
     ],  # Only allow specific headers
@@ -300,8 +299,8 @@ async def list_models(
     request: Request,
     auth: HTTPAuthorizationCredentials = Security(security)
 ):
-    # 只需验证API密钥，不需要用户会话
-    await get_api_key(auth)
+    # 只需验证用户令牌，不需要用户会话
+    await get_authenticated_user_id(auth)
     return JSONResponse(content={"models": [{
         "model_id": mid, 
         "model_name": name} for mid, name in llm_model_list.items()]})
@@ -311,8 +310,7 @@ async def list_mcp_server(
     request: Request,
     auth: HTTPAuthorizationCredentials = Security(security)
 ):
-    await get_api_key(auth)
-    # 获取用户会话
+    # 获取用户会话（内部会验证用户令牌）
     session = await get_or_create_user_session(request, auth)
     
     # 合并全局和用户特定的服务器列表
@@ -336,11 +334,8 @@ async def remove_history(
     background_tasks: BackgroundTasks,
     auth: HTTPAuthorizationCredentials = Security(security)
 ):
-    # 获取用户会话
-    await get_api_key(auth)
-    
-    # 尝试从请求头获取用户ID，如果不存在则使用API密钥作为备用ID
-    user_id = request.headers.get("X-User-ID", auth.credentials)
+    # 验证用户令牌，用户ID只取自令牌
+    user_id = await get_authenticated_user_id(auth)
     
     # 直接从ddb里删除记录即可
     if DDB_TABLE:
@@ -391,11 +386,14 @@ async def stop_stream(
     """停止正在进行的模型输出流"""
     global active_streams, user_sessions
     logger.info(f"stopping request:{stream_id} in {active_streams}")
-    # 获取用户会话
-    user_id = request.headers.get("X-User-ID", auth.credentials)
+    # 验证用户令牌，用户ID只取自令牌
+    user_id = await get_authenticated_user_id(auth)
     session = user_sessions.get(user_id)     
     if not stream_id in active_streams or not session:
-        # 如果不在当前的实例中，则直接remove ddb中的数据
+        # 如果不在当前的实例中，则直接remove ddb中的数据（仅限当前用户自己的流）
+        if await get_stream_id(stream_id) != user_id:
+            logger.warning(f"Stream {stream_id} does not belong to user_id:{user_id}, not authorized to stop this stream")
+            return JSONResponse(content={"errno": -1, "msg": "Not authorized to stop this stream"})
         try:
             await delete_stream_id(stream_id=stream_id)
             logger.info(f"Removed {stream_id} from remote record")

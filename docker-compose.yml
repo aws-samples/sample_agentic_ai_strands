@@ -6,11 +6,13 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      - "7002:7002"
+      # Host-local only. Reach it from another machine through an SSH tunnel, not a wider publish.
+      - "127.0.0.1:7002:7002"
     environment:
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - STRANDS_MODEL_PROVIDER=${STRANDS_MODEL_PROVIDER:-bedrock}
-      - API_KEY=${API_KEY:-123456}
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID:?set COGNITO_USER_POOL_ID in .env}
+      - COGNITO_APP_CLIENT_ID=${COGNITO_APP_CLIENT_ID:?set COGNITO_APP_CLIENT_ID in .env}
       - MAX_TURNS=${MAX_TURNS:-200}
       - INACTIVE_TIME=${INACTIVE_TIME:-1440}
     volumes:
@@ -30,12 +32,13 @@ services:
       context: ./react_ui
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       - NODE_ENV=production
       - SERVER_MCP_BASE_URL=http://backend:7002
       - NEXT_PUBLIC_MCP_BASE_URL=/api
-      - NEXT_PUBLIC_API_KEY=123456
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID:?set COGNITO_USER_POOL_ID in .env}
+      - COGNITO_APP_CLIENT_ID=${COGNITO_APP_CLIENT_ID:?set COGNITO_APP_CLIENT_ID in .env}
     depends_on:
       - backend
     networks:
