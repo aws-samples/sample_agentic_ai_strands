@@ -70,7 +70,7 @@ Resources:
             # clone repo
             su - ubuntu -c '
               cd ~
-              git clone https://github.com/aws-samples/sample_agentic_ai_strands -b workshop
+              git clone https://github.com/aws-samples/sample_agentic_ai_strands -b master
             '
 
             # 为ubuntu用户专门安装和配置工具
